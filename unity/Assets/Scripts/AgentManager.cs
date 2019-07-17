@@ -222,7 +222,7 @@ public class AgentManager : MonoBehaviour
 	}
 
 	public IEnumerator ResetCoroutine(ServerAction response) {
-		// Setting all the agents invisible here is silly but necessary
+		// Destroying all the agents invisible here is silly but necessary
 		// as otherwise the FirstPersonCharacterCull.cs script will
 		// try to disable renderers that are invalid (but not null)
 		// as the scene they existed in has changed.

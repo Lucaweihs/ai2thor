@@ -44,6 +44,9 @@ def queue_get(que):
             pass
     return res
 
+def queue_get_timeout(que, timeout):
+    return que.get(block=True, timeout=timeout)
+
 class NumpyAwareEncoder(json.JSONEncoder):
 
     def default(self, obj):

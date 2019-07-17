@@ -29,9 +29,9 @@ import tty
 import sys
 import termios
 try:
-    from queue import Queue
+    from queue import Queue, Empty
 except ImportError:
-    from Queue import Queue
+    from Queue import Queue, Empty
 
 import zipfile
 
@@ -40,7 +40,7 @@ import numpy as np
 import ai2thor.docker
 import ai2thor.downloader
 import ai2thor.server
-from ai2thor.server import queue_get
+from ai2thor.server import queue_get, queue_get_timeout
 from ai2thor._builds import BUILDS
 from ai2thor._quality_settings import QUALITY_SETTINGS, DEFAULT_QUALITY
 
@@ -386,7 +386,13 @@ class Controller(object):
             scene_name = scene_name + "_physics"
 
         self.response_queue.put_nowait(dict(action='Reset', sceneName=scene_name, sequenceId=0))
-        self.last_event = queue_get(self.request_queue)
+        try:
+            self.last_event = queue_get_timeout(self.request_queue, 10)
+        except Empty as _:
+            raise TimeoutError(
+                ("Could not load scene {0} within 10 seconds."
+                " Is {0} a valid scene for this build?").format(scene_name)
+            )
 
         return self.last_event
 
