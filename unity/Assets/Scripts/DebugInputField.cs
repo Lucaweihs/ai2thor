@@ -150,6 +150,7 @@ namespace UnityStandardAssets.Characters.FirstPerson
                         {
 							action.gridSize = float.Parse(splitcommand[1]);
                             action.agentCount = int.Parse(splitcommand[2]);
+                            Debug.Log(action.agentCount);
                         } else if (splitcommand.Length == 4) {
                             action.gridSize = float.Parse(splitcommand[1]);
                             action.agentCount = int.Parse(splitcommand[2]);
@@ -533,6 +534,17 @@ namespace UnityStandardAssets.Characters.FirstPerson
                         break;
                     }
 
+                case "ruaa":
+                    {
+                        ServerAction action = new ServerAction();
+                        action.action = "RotateUniverseAroundAgent";
+
+                        action.rotation = new Vector3(
+                            0f, float.Parse(splitcommand[1]), 0f
+                        );
+                        PhysicsController.ProcessControlCommand(action);
+                        break;
+                    }
                 case "thas":
                     {
                         ServerAction action = new ServerAction();

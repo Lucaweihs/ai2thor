@@ -80,11 +80,6 @@ namespace UnityStandardAssets.Characters.FirstPerson {
         public Material[] ScreenFaces; //0 - neutral, 1 - Happy, 2 - Mad, 3 - Angriest
         public MeshRenderer MyFaceMesh;
 
-        public Bounds sceneBounds = new Bounds(
-            new Vector3(float.PositiveInfinity, float.PositiveInfinity, float.PositiveInfinity),
-            new Vector3(-float.PositiveInfinity, -float.PositiveInfinity, -float.PositiveInfinity)
-        );
-
         //change visibility check to use this distance when looking down
         //protected float DownwardViewDistance = 2.0f;
 
@@ -115,12 +110,10 @@ namespace UnityStandardAssets.Characters.FirstPerson {
             crouchingLocalCameraPosition = m_Camera.transform.localPosition;
             crouchingLocalCameraPosition.y = 0.0f;
 
-            // Recordining initially disabled renderers and scene bounds 
+            // Recordining initially disabled renderers
             foreach (Renderer r in GameObject.FindObjectsOfType<Renderer>()) {
                 if (!r.enabled) {
                     initiallyDisabledRenderers.Add(r.GetInstanceID());
-                } else {
-                    sceneBounds.Encapsulate(r.bounds);
                 }
             }
         }
@@ -1679,7 +1672,7 @@ namespace UnityStandardAssets.Characters.FirstPerson {
                 }
                 m_Camera.transform.localEulerAngles = new Vector3(action.horizon, 0.0f, 0.0f);
             } else {
-                if (!sceneBounds.Contains(targetTeleport)) {
+                if (!agentManager.SceneBounds.Contains(targetTeleport)) {
                     errorMessage = "Teleport target out of scene bounds.";
                     actionFinished(false);
                     return;
@@ -1755,7 +1748,7 @@ namespace UnityStandardAssets.Characters.FirstPerson {
         }
 
         protected bool checkIfSceneBoundsContainTargetPosition(Vector3 position) {
-            if (!sceneBounds.Contains(position)) {
+            if (!agentManager.SceneBounds.Contains(position)) {
                 errorMessage = "Scene bounds do not contain target position.";
                 return false;
             } else {
@@ -4113,7 +4106,7 @@ namespace UnityStandardAssets.Characters.FirstPerson {
                 lastLocalCameraPosition = m_Camera.transform.localPosition;
                 lastLocalCameraRotation = m_Camera.transform.localRotation;
 
-                Bounds b = sceneBounds;
+                Bounds b = agentManager.SceneBounds;
                 float midX = (b.max.x + b.min.x) / 2.0f;
                 float midZ = (b.max.z + b.min.z) / 2.0f;
                 m_Camera.transform.rotation = Quaternion.Euler(90.0f, 0.0f, 0.0f);
@@ -4128,26 +4121,56 @@ namespace UnityStandardAssets.Characters.FirstPerson {
             actionFinished(true);
         }
 
-        private bool closeObject(SimObjPhysics target) {
+        private bool closeObject(SimObjPhysics target, bool freezeContained = false) {
             CanOpen_Object codd = target.GetComponent<CanOpen_Object>();
 
             if (codd) {
                 //if object is open, close it
                 if (codd.isOpen) {
+                    Dictionary<string, Transform> uniqueIdToOldParent = null;
+                    if (freezeContained) {
+                        uniqueIdToOldParent = new Dictionary<string, Transform>();
+                        foreach (string uniqueId in target.Contains()) {
+                            SimObjPhysics toReParent = physicsSceneManager.UniqueIdToSimObjPhysics[uniqueId];
+                            uniqueIdToOldParent[toReParent.UniqueID] = toReParent.transform.parent;
+                            toReParent.transform.parent = codd.transform;
+                        }
+                    }
                     codd.Interact();
+                    if (freezeContained) {
+                        foreach (string uniqueId in target.Contains()) {
+                            SimObjPhysics toReParent = physicsSceneManager.UniqueIdToSimObjPhysics[uniqueId];
+                            toReParent.transform.parent = uniqueIdToOldParent[toReParent.UniqueID];
+                        }
+                    }
                     return true;
                 }
             }
             return false;
         }
 
-        private bool openObject(SimObjPhysics target) {
+        private bool openObject(SimObjPhysics target, bool freezeContained = false) {
             CanOpen_Object codd = target.GetComponent<CanOpen_Object>();
 
             if (codd) {
                 //if object is open, close it
                 if (!codd.isOpen) {
+                    Dictionary<string, Transform> uniqueIdToOldParent = null;
+                    if (freezeContained) {
+                        uniqueIdToOldParent = new Dictionary<string, Transform>();
+                        foreach (string uniqueId in target.Contains()) {
+                            SimObjPhysics toReParent = physicsSceneManager.UniqueIdToSimObjPhysics[uniqueId];
+                            uniqueIdToOldParent[toReParent.UniqueID] = toReParent.transform.parent;
+                            toReParent.transform.parent = codd.transform;
+                        }
+                    }
                     codd.Interact();
+                    if (freezeContained) {
+                        foreach (string uniqueId in target.Contains()) {
+                            SimObjPhysics toReParent = physicsSceneManager.UniqueIdToSimObjPhysics[uniqueId];
+                            toReParent.transform.parent = uniqueIdToOldParent[toReParent.UniqueID];
+                        }
+                    }
                     return true;
                 }
             }
@@ -4166,7 +4189,7 @@ namespace UnityStandardAssets.Characters.FirstPerson {
                 }
             }
             if (coos.Count != 0) {
-                StartCoroutine(InteractAndWait(coos));
+                StartCoroutine(InteractAndWait(coos, action.simplifyPhysics));
             } else {
                 errorMessage = "No objects to close.";
                 actionFinished(false);
@@ -4184,7 +4207,7 @@ namespace UnityStandardAssets.Characters.FirstPerson {
                     }
                 }
             }
-            StartCoroutine(InteractAndWait(coos));
+            StartCoroutine(InteractAndWait(coos, action.simplifyPhysics));
         }
 
         public void CloseObject(ServerAction action) {
@@ -4224,7 +4247,7 @@ namespace UnityStandardAssets.Characters.FirstPerson {
                     if (codd.isOpen) {
                         // codd.Interact();
                         // actionFinished(true);
-                        StartCoroutine(InteractAndWait(codd));
+                        StartCoroutine(InteractAndWait(codd, action.simplifyPhysics));
                     } else {
                         errorMessage = "object already closed: " + action.objectId;
                         actionFinished(false);
@@ -4380,7 +4403,7 @@ namespace UnityStandardAssets.Characters.FirstPerson {
             return;
         }
 
-        protected IEnumerator InteractAndWait(CanOpen_Object coo) {
+        protected IEnumerator InteractAndWait(CanOpen_Object coo, bool freezeContained = false) {
             bool ignoreAgentInTransition = true;
 
             List<Collider> collidersDisabled = new List<Collider>();
@@ -4390,6 +4413,19 @@ namespace UnityStandardAssets.Characters.FirstPerson {
                         collidersDisabled.Add(c);
                         c.enabled = false;
                     }
+                }
+            }
+
+            Dictionary<string, Transform> uniqueIdToOldParent = null;
+            SimObjPhysics target = null;
+            if (freezeContained) {
+                target = ancestorSimObjPhysics(coo.gameObject);
+                uniqueIdToOldParent = new Dictionary<string, Transform>();
+                foreach (string uniqueId in target.Contains()) {
+                    SimObjPhysics toReParent = physicsSceneManager.UniqueIdToSimObjPhysics[uniqueId];
+                    uniqueIdToOldParent[toReParent.UniqueID] = toReParent.transform.parent;
+                    toReParent.transform.parent = coo.transform;
+                    toReParent.GetComponent<Rigidbody>().isKinematic = true;
                 }
             }
 
@@ -4427,6 +4463,17 @@ namespace UnityStandardAssets.Characters.FirstPerson {
                 }
             }
 
+            if (freezeContained) {
+                foreach (string uniqueId in uniqueIdToOldParent.Keys) {
+                    SimObjPhysics toReParent = physicsSceneManager.UniqueIdToSimObjPhysics[uniqueId];
+                    toReParent.transform.parent = uniqueIdToOldParent[toReParent.UniqueID];
+                    Rigidbody rb = toReParent.GetComponent<Rigidbody>();
+                    rb.velocity = new Vector3(0f, 0f, 0f);
+                    rb.angularVelocity = new Vector3(0f, 0f, 0f);
+                    rb.isKinematic = false;
+                }
+            }
+
             if (!success) {
                 errorMessage = "Object failed to open/close successfully.";
             }
@@ -4447,7 +4494,7 @@ namespace UnityStandardAssets.Characters.FirstPerson {
             return anyStillRunning;
         }
 
-        protected IEnumerator InteractAndWait(List<CanOpen_Object> coos) {
+        protected IEnumerator InteractAndWait(List<CanOpen_Object> coos, bool freezeContained = false) {
             bool ignoreAgentInTransition = true;
 
             List<Collider> collidersDisabled = new List<Collider>();
@@ -4459,6 +4506,24 @@ namespace UnityStandardAssets.Characters.FirstPerson {
                     }
                 }
             }
+
+            Dictionary<string, Transform> uniqueIdToOldParent = null;
+            List<SimObjPhysics> targets = null;
+            if (freezeContained) {
+                targets = new List<SimObjPhysics>();
+                uniqueIdToOldParent = new Dictionary<string, Transform>();
+                foreach (CanOpen_Object coo in coos) {
+                    SimObjPhysics target = ancestorSimObjPhysics(coo.gameObject);
+                    targets.Add(target);
+                    foreach (string uniqueId in target.Contains()) {
+                        SimObjPhysics toReParent = physicsSceneManager.UniqueIdToSimObjPhysics[uniqueId];
+                        uniqueIdToOldParent[toReParent.UniqueID] = toReParent.transform.parent;
+                        toReParent.transform.parent = coo.transform;
+                        toReParent.GetComponent<Rigidbody>().isKinematic = true;
+                    }
+                }
+            }
+            
             foreach (CanOpen_Object coo in coos) {
                 coo.Interact();
             }
@@ -4481,6 +4546,17 @@ namespace UnityStandardAssets.Characters.FirstPerson {
 
                 foreach (Collider c in collidersDisabled) {
                     c.enabled = true;
+                }
+            }
+
+            if (freezeContained) {
+                foreach (string uniqueId in uniqueIdToOldParent.Keys) {
+                    SimObjPhysics toReParent = physicsSceneManager.UniqueIdToSimObjPhysics[uniqueId];
+                    toReParent.transform.parent = uniqueIdToOldParent[toReParent.UniqueID];
+                    Rigidbody rb = toReParent.GetComponent<Rigidbody>();
+                    rb.velocity = new Vector3(0f, 0f, 0f);
+                    rb.angularVelocity = new Vector3(0f, 0f, 0f);
+                    rb.isKinematic = false;
                 }
             }
 
@@ -4735,7 +4811,7 @@ namespace UnityStandardAssets.Characters.FirstPerson {
                     //coroutine will need some tweaking. Basically we need to send emit frames after some number of yield
                     //return null calls in the loop that's tracking iTween instances? We will figure that out later but
                     //for future notice I'm leaving this note.
-                    StartCoroutine(InteractAndWait(codd));
+                    StartCoroutine(InteractAndWait(codd, action.simplifyPhysics));
 
                 }
 
@@ -5400,6 +5476,11 @@ namespace UnityStandardAssets.Characters.FirstPerson {
         ///// MISC /////
         ////////////////
 
+        public void RotateUniverseAroundAgent(ServerAction action) {
+            agentManager.RotateAgentsByRotatingUniverse(action.rotation.y);
+            actionFinished(true);
+        }
+
         public void ChangeFOV(ServerAction action) {
             m_Camera.fieldOfView = action.fov;
             actionFinished(true);
@@ -5863,8 +5944,8 @@ namespace UnityStandardAssets.Characters.FirstPerson {
 
         public void GetSceneBounds(ServerAction action) {
             reachablePositions = new Vector3[2];
-            reachablePositions[0] = sceneBounds.min;
-            reachablePositions[1] = sceneBounds.max;
+            reachablePositions[0] = agentManager.SceneBounds.min;
+            reachablePositions[1] = agentManager.SceneBounds.max;
 #if UNITY_EDITOR
             Debug.Log(reachablePositions[0]);
             Debug.Log(reachablePositions[1]);
@@ -6178,7 +6259,7 @@ namespace UnityStandardAssets.Characters.FirstPerson {
                             }
                         }
                         Vector3 newPosition = p + d * gridSize * gridMultiplier;
-                        bool inBounds = sceneBounds.Contains(newPosition);
+                        bool inBounds = agentManager.SceneBounds.Contains(newPosition);
                         if (errorMessage == "" && !inBounds) {
                             errorMessage = "In " +
                                 UnityEngine.SceneManagement.SceneManager.GetActiveScene().name +
@@ -6320,7 +6401,7 @@ namespace UnityStandardAssets.Characters.FirstPerson {
             Vector3 targetPosition = action.position;
             Vector3 targetRotation = action.rotation;
 
-            if (!action.forceAction && !sceneBounds.Contains(targetPosition)) {
+            if (!action.forceAction && !agentManager.SceneBounds.Contains(targetPosition)) {
                 errorMessage = "Target position is out of bounds!";
                 actionFinished(false);
                 return;
@@ -6350,7 +6431,7 @@ namespace UnityStandardAssets.Characters.FirstPerson {
         }
 
         protected SimObjPhysics createObjectAtLocation(string objectType, Vector3 targetPosition, Vector3 targetRotation, int objectVariation = 1) {
-            if (!sceneBounds.Contains(targetPosition)) {
+            if (!agentManager.SceneBounds.Contains(targetPosition)) {
                 errorMessage = "Target position is out of bounds!";
                 return null;
             }
@@ -6893,7 +6974,7 @@ namespace UnityStandardAssets.Characters.FirstPerson {
                     }
                 }
             }
-            StartCoroutine(InteractAndWait(toInteractWith));
+            StartCoroutine(InteractAndWait(toInteractWith, action.simplifyPhysics));
         }
 
         public void GetApproximateVolume(ServerAction action) {
@@ -7339,7 +7420,9 @@ namespace UnityStandardAssets.Characters.FirstPerson {
             int objectVariation = action.objectVariation;
             Vector3[] reachablePositions = getReachablePositions();
 
-            Bounds b = sceneBounds;
+            Bounds b = new Bounds();
+            b.min = agentManager.SceneBounds.min;
+            b.max = agentManager.SceneBounds.max;
             b.min = new Vector3(
                 Math.Max(b.min.x, transform.position.x - 7),
                 Math.Max(b.min.y, transform.position.y - 1.3f),
@@ -7488,7 +7571,9 @@ namespace UnityStandardAssets.Characters.FirstPerson {
             };
             int numObjectVariations = 3;
 
-            Bounds b = sceneBounds;
+            Bounds b = new Bounds();
+            b.min = agentManager.SceneBounds.min;
+            b.max = agentManager.SceneBounds.max;
             b.min = new Vector3(
                 Math.Max(b.min.x, transform.position.x - 7),
                 Math.Max(b.min.y, transform.position.y - 1.3f),

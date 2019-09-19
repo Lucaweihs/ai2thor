@@ -45,6 +45,23 @@ public class AgentManager : MonoBehaviour
     private PhysicsSceneManager physicsSceneManager;
     public int AdvancePhysicsStepCount = 0;
 
+	public Bounds sceneBounds = new Bounds(
+		new Vector3(float.PositiveInfinity, float.PositiveInfinity, float.PositiveInfinity),
+		new Vector3(-float.PositiveInfinity, -float.PositiveInfinity, -float.PositiveInfinity)
+	);
+	public Bounds SceneBounds
+    {
+        get { 
+			if (sceneBounds.min.x == float.PositiveInfinity) {
+				ResetSceneBounds();
+			}
+			return sceneBounds;
+		}
+        set { 
+			sceneBounds = value; 
+		}
+    }
+
 	void Awake() {
 
         tex = new Texture2D(UnityEngine.Screen.width, UnityEngine.Screen.height, TextureFormat.RGB24, false);
@@ -122,7 +139,11 @@ public class AgentManager : MonoBehaviour
 
 	private IEnumerator addAgents(ServerAction action) {
 		yield return null;
+
 		Vector3[] reachablePositions = primaryAgent.getReachablePositions(2.0f);
+
+		Debug.Log(reachablePositions.Length);
+
 		for (int i = 1; i < action.agentCount && this.agents.Count < Math.Min(agentColors.Length, action.agentCount); i++) {
 			action.x = reachablePositions[i + 4].x;
 			action.y = reachablePositions[i + 4].y;
@@ -135,7 +156,58 @@ public class AgentManager : MonoBehaviour
 		}
 		this.agents[0].m_Camera.depth = 9999;
 
+		if (action.startAgentsRotatedBy != 0f) {
+			RotateAgentsByRotatingUniverse(action.startAgentsRotatedBy);
+		} else {
+			ResetSceneBounds();
+		}
+
 		readyToEmit = true;
+	}
+
+	public void ResetSceneBounds() {
+		// Recordining initially disabled renderers and scene bounds 
+		sceneBounds = new Bounds(
+			new Vector3(float.PositiveInfinity, float.PositiveInfinity, float.PositiveInfinity),
+			new Vector3(-float.PositiveInfinity, -float.PositiveInfinity, -float.PositiveInfinity)
+		);
+		foreach (Renderer r in GameObject.FindObjectsOfType<Renderer>()) {
+			if (r.enabled) {
+				sceneBounds.Encapsulate(r.bounds);
+			}
+		}
+	}
+
+	public void RotateAgentsByRotatingUniverse(float rotation) {
+		List<Quaternion> startAgentRots = new List<Quaternion>();
+
+		foreach (BaseFPSAgentController agent in this.agents) {
+			startAgentRots.Add(agent.transform.rotation);
+		}
+
+		GameObject superObject = GameObject.Find("SuperTopLevel");
+		if (superObject == null) {
+			superObject = new GameObject("SuperTopLevel");
+		}
+
+		superObject.transform.position = this.agents[0].transform.position;
+
+		List<GameObject> topLevelObjects = new List<GameObject>();
+		foreach (GameObject go in UnityEngine.SceneManagement.SceneManager.GetActiveScene().GetRootGameObjects()) {
+			topLevelObjects.Add(go);
+			go.transform.SetParent(superObject.transform);
+		}
+
+		superObject.transform.rotation = Quaternion.Euler(0f, rotation, 0f);
+		foreach (GameObject go in topLevelObjects) {
+			go.transform.SetParent(null);
+		}
+
+		for (int i = 0; i < this.agents.Count; i++) {
+			agents[i].transform.rotation = startAgentRots[i];
+		}
+
+		ResetSceneBounds();
 	}
 
 	public void AddThirdPartyCamera(ServerAction action) {
@@ -904,6 +976,8 @@ public class ServerAction
 	public int randomSeed;
 	public float moveMagnitude;
 	public bool autoSimulation = true;
+	public bool simplifyPhysics = false;
+	public float startAgentsRotatedBy = 0f;
 	public float visibilityDistance;
 	public bool continuousMode; //i don't think this is used right now? also how is this different from the continuous bool above?
 	public bool uniquePickupableObjectTypes; // only allow one of each object type to be visible

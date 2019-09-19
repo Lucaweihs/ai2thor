@@ -399,7 +399,7 @@ public class PhysicsSceneManager : MonoBehaviour
 		// 	go.SetActive(true);
 		// 	SimObjPhysics sop = go.GetComponent<SimObjPhysics>();
 		// 	sop.transform.parent = topLevelObject.transform;
-		// 	sop.transform.position = new Vector3(0.0f, controller.sceneBounds.min.y - 10f, 0.0f);
+		// 	sop.transform.position = new Vector3(0.0f, controller.agentManager.SceneBounds.min.y - 10f, 0.0f);
 		// 	go.GetComponent<Rigidbody>().isKinematic = true;
 		// }
 
