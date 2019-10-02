@@ -595,6 +595,14 @@ namespace UnityStandardAssets.Characters.FirstPerson
                         PhysicsController.ProcessControlCommand(action);
                         break;
                     }
+                case "grpfo":
+                    {
+                        ServerAction action = new ServerAction();
+                        action.action = "GetReachablePositionsForObject";
+                        action.objectId = splitcommand[1];
+                        PhysicsController.ProcessControlCommand(action);
+                        break;
+                    }
                 case "rspawnlifted":
                     {
                         ServerAction action = new ServerAction();

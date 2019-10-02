@@ -1283,9 +1283,12 @@ namespace UnityStandardAssets.Characters.FirstPerson {
                 agent.transform.position = new Vector3(50f, 50f, 50f);
                 oldAgentRotations.Add(agent.transform.rotation);
             }
-            SimObjPhysics objectCreated = randomlyCreateAndPlaceObjectOnFloor(
-                action.objectType, action.objectVariation, reachablePositions
-            );
+            SimObjPhysics objectCreated = null;
+            try {
+                objectCreated = randomlyCreateAndPlaceObjectOnFloor(
+                    action.objectType, action.objectVariation, reachablePositions
+                );
+            } catch (Exception e) {}
             if (objectCreated == null) {
                 for (int i = 0; i < this.agentManager.agents.Count; i++) {
                     var agent = this.agentManager.agents[i];
