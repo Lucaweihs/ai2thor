@@ -84,14 +84,14 @@ class Controller(object):
         self._max_x += 1.0
         self._min_z -= 1.0
         self._min_x -= 1.0
-        print("max_x %s" % self._max_x)
-        print("max_z %s" % self._max_z)
-        print("min_x %s" % self._min_x)
-        print("min_z %s" % self._min_z)
+        # print("max_x %s" % self._max_x)
+        # print("max_z %s" % self._max_z)
+        # print("min_x %s" % self._min_x)
+        # print("min_z %s" % self._min_z)
         self._x_size = int((self._max_x - self._min_x) / self.grid_size) + 1
         self._z_size = int((self._max_z - self._min_z) / self.grid_size) + 1
-        print(self._x_size)
-        print(self._z_size)
+        # print(self._x_size)
+        # print(self._z_size)
 
         self.agent_reachable_positions_mask = self.empty_mask()
         self.object_reachable_positions_mask = self.empty_mask()
@@ -170,30 +170,35 @@ class Controller(object):
     def RandomlyCreateLiftedFurniture(self, action):
         # pick random reachable spot in object_reachable_pos
         # random.seed(0)
-        point = random.choice(np.argwhere(self.agent_reachable_positions_mask))
-        self.lifted_object = LiftedObject(
-            self, self.lifted_object_id, self.lifted_object_type
-        )
-        z, x = point
-        self.lifted_object.z = z
-        self.lifted_object.x = x
+        for i in range(10):
+            point = random.choice(np.argwhere(self.agent_reachable_positions_mask))
+            self.lifted_object = LiftedObject(
+                self, self.lifted_object_id, self.lifted_object_type
+            )
+            z, x = point
+            self.lifted_object.z = z
+            self.lifted_object.x = x
 
-        current_state = self.empty_mask()
-        object_mask = self.lifted_object_template == 1
-        interactable_positions = self.lifted_object_template == 2
+            current_state = self.empty_mask()
+            object_mask = self.lifted_object_template == 1
+            interactable_positions = self.lifted_object_template == 2
 
-        mask_buffer = object_mask.shape[0] // 2
-        current_state[
-            z - mask_buffer : z + mask_buffer + 1, x - mask_buffer : x + mask_buffer + 1
-        ] = interactable_positions
-        current_state &= self.agent_reachable_positions_mask
-        print(type(np.argwhere(current_state)))
-        agent_points = random.sample(
-            list(np.argwhere(current_state)), k=self.agent_count
-        )
+            mask_buffer = object_mask.shape[0] // 2
+            current_state[
+                z - mask_buffer : z + mask_buffer + 1, x - mask_buffer : x + mask_buffer + 1
+            ] = interactable_positions
+            current_state &= self.agent_reachable_positions_mask
+            agent_points = random.sample(
+                list(np.argwhere(current_state)), k=self.agent_count
+            )
 
-        # XXX need to retry if we can't put the agent in a location
-        assert len(agent_points) == self.agent_count
+            # XXX need to retry if we can't put the agent in a location
+            if len(agent_points) == self.agent_count:
+                break
+
+        if len(agent_points) != self.agent_count:
+            raise Exception("Couldn't create random start point for scene name %s" % self.scene_name)
+
         for i, agent in enumerate(self.agents):
             agent.z = agent_points[i][0]
             agent.x = agent_points[i][1]

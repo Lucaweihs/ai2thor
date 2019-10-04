@@ -1078,7 +1078,5 @@ def cache_gridworld(context):
         y=1.3,
         z=1.0))
 
-    #hands_controller.viz_world()
-    import time
-    s = time.time()
+    hands_controller.viz_world()
     event = hands_controller.step(dict(action='RotateRight', agentId=0))
