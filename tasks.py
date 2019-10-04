@@ -1036,3 +1036,49 @@ def webgl_deploy_all(ctx, verbose=False, individual_rooms=False):
         else:
             webgl_build(ctx, room_ranges=range_str, directory=build_dir)
             webgl_deploy(ctx, source_dir=build_dir, target_dir=key, verbose=verbose)
+
+
+@task
+def cache_gridworld(context):
+    import ai2thor.controller
+    import ai2thor.hands_controller
+
+    env = ai2thor.controller.Controller()
+    env.local_executable_path = _local_build_path()
+    env.start(player_screen_width=600, player_screen_height=600)
+    env.reset('FloorPlan223')
+    grid_size = 0.25
+    event = env.step(dict(action='Initialize', agentCount=2, gridSize=grid_size))
+    event = env.step(dict(action='GetReachablePositions'))
+
+    agent_reachable_pos = event.metadata['actionReturn']
+
+    event = env.step(dict(
+        action='RandomlyCreateLiftedFurniture',
+        objectType='Television',
+        objectVariation=1,
+        y=1.3,
+        z=1.0))
+    objectId = event.metadata['actionReturn']
+    event = env.step(dict( action='GetReachablePositionsForObject', objectId=objectId))
+    object_reachable_pos = event.metadata['actionReturn']
+
+    hands_controller = ai2thor.hands_controller.Controller(
+        agent_reachable_pos,
+        object_reachable_pos,
+        lifted_object_id=objectId, 
+        lifted_object_type=event.events[0].get_object(objectId)['objectType'])
+
+    event = hands_controller.reset('FloorPlan223')
+    event = hands_controller.step(dict(action='Initialize', agentCount=2, gridSize=0.25))
+    event = hands_controller.step(dict(
+        action='RandomlyCreateLiftedFurniture',
+        objectType='Television',
+        objectVariation=1,
+        y=1.3,
+        z=1.0))
+
+    #hands_controller.viz_world()
+    import time
+    s = time.time()
+    event = hands_controller.step(dict(action='RotateRight', agentId=0))
