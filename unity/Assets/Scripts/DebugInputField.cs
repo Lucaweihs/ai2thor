@@ -635,6 +635,14 @@ namespace UnityStandardAssets.Characters.FirstPerson
                         PhysicsController.ProcessControlCommand(action);
                         break;
                     }
+                case "gusfo": {
+                        ServerAction action = new ServerAction();
+                        action.action = "GetUnreachableSilhouetteForObject";
+                        action.objectId = splitcommand[1];
+                        action.z = float.Parse(splitcommand[2]);
+                        PhysicsController.ProcessControlCommand(action);
+                        break;
+                    }
 
                 case "rhs":
                     {
@@ -705,6 +713,14 @@ namespace UnityStandardAssets.Characters.FirstPerson
                     {
                         ServerAction action = new ServerAction();
                         action.action = "ToggleMapView";
+                        PhysicsController.ProcessControlCommand(action);
+                        break;
+                    }
+                case "nopfwoiv":
+                    {
+                        ServerAction action = new ServerAction();
+                        action.action = "NumberOfPositionsObjectsOfTypeAreVisibleFrom";
+                        action.objectType = splitcommand[1];
                         PhysicsController.ProcessControlCommand(action);
                         break;
                     }

@@ -1263,6 +1263,65 @@ namespace UnityStandardAssets.Characters.FirstPerson {
             actionFinished(true, tableId);
         }
 
+        public float GetXZRadiusOfObject(SimObjPhysics sop) {
+            BoxCollider bc = sop.BoundingBox.GetComponent<BoxCollider>();
+            return (new Vector3(bc.size.x, 0f, bc.size.z) * 0.5f).magnitude;
+        }
+
+        public void GetUnreachableSilhouetteForObject(ServerAction action) {
+            if (!physicsSceneManager.UniqueIdToSimObjPhysics.ContainsKey(action.objectId)) {
+                errorMessage = "Cannot find object with id " + action.objectId;
+                actionFinished(false);
+                return;
+            }
+            if (action.z <= 0.0f) {
+                errorMessage = "Interactable distance (z) must be > 0";
+                actionFinished(false);
+                return;
+            }
+            SimObjPhysics targetObject = physicsSceneManager.UniqueIdToSimObjPhysics[action.objectId];
+
+            Vector3 savedObjectPosition = targetObject.transform.position;
+            Quaternion savedObjectRotation = targetObject.transform.rotation;
+            Vector3 savedAgentPosition = transform.position;
+            Quaternion savedAgentRotation = transform.rotation;
+
+            targetObject.transform.rotation = Quaternion.identity;
+            transform.rotation = Quaternion.identity;
+
+            float objectRad = GetXZRadiusOfObject(targetObject);
+
+            var sb = new System.Text.StringBuilder();
+            int halfWidth = 1 + ((int) Math.Round((objectRad + action.z + m_CharacterController.radius) / gridSize));
+            for (int i = 0; i < 2 * halfWidth + 1; i++) {
+                float xOffset = ((i - halfWidth) * gridSize);
+                for (int j = 0; j < 2 * halfWidth + 1; j++) {
+                    if (j != 0) {
+                        sb.Append(" ");
+                    }
+                    float zOffset = ((j - halfWidth) * gridSize);
+                    transform.position = targetObject.transform.position + new Vector3(xOffset, 0f, zOffset);
+                    if (isAgentCapsuleCollidingWith(targetObject.gameObject)) {
+                        sb.Append("1");
+                    } else if(distanceToObject(targetObject) <= action.z) {
+                        sb.Append("2");
+                    } else {
+                        sb.Append("0");
+                    }
+                }
+                sb.Append("\n");
+            }
+            string mat = sb.ToString();
+            Debug.Log(mat);
+
+            targetObject.transform.position = savedObjectPosition;
+            targetObject.transform.rotation = savedObjectRotation;
+            transform.position = savedAgentPosition;
+            transform.rotation = savedAgentRotation;
+
+            actionFinished(true, mat);
+        }
+
         public void RandomlyCreateLiftedFurniture(ServerAction action) {
             if (action.z < 0.25f) {
                 errorMessage = "z must be at least 0.25";
@@ -5870,35 +5929,22 @@ namespace UnityStandardAssets.Characters.FirstPerson {
 
             actionFinished(true, goodLocationsDict);
         }
-        
-        public void NumberOfPositionsFromWhichItemIsVisible(ServerAction action) {
-            Vector3[] positions = null;
-            if (action.positions != null && action.positions.Count != 0) {
-                positions = action.positions.ToArray();
-            } else {
-                positions = getReachablePositions();
-            }
 
+        public int NumberOfPositionsFromWhichObjectIsVisible(SimObjPhysics theObject, Vector3[] positions) {
             bool wasStanding = isStanding();
             Vector3 oldPosition = transform.position;
             Quaternion oldRotation = transform.rotation;
 
-            if (!physicsSceneManager.UniqueIdToSimObjPhysics.ContainsKey(action.objectId)) {
-                errorMessage = "Object ID appears to be invalid.";
-                actionFinished(false);
-                return;
-            }
             if (ItemInHand != null) {
                 ItemInHand.gameObject.SetActive(false);
             }
-
-            SimObjPhysics theObject = physicsSceneManager.UniqueIdToSimObjPhysics[action.objectId];
 
             int numTimesVisible = 0;
             for (int j = 0; j < 2; j++) { // Standing / Crouching
                 if (j == 0) {
                     stand();
-                } else {
+                }
+                else {
                     crouch();
                 }
                 for (int i = 0; i < 4; i++) { // 4 rotations
@@ -5915,7 +5961,8 @@ namespace UnityStandardAssets.Characters.FirstPerson {
 
             if (wasStanding) {
                 stand();
-            } else {
+            }
+            else {
                 crouch();
             }
             transform.position = oldPosition;
@@ -5924,6 +5971,30 @@ namespace UnityStandardAssets.Characters.FirstPerson {
                 ItemInHand.gameObject.SetActive(true);
             }
 
+            return numTimesVisible;
+        }
+
+        public void NumberOfPositionsFromWhichItemIsVisible(ServerAction action) {
+            NumberOfPositionsFromWhichObjectIsVisible(action);
+        }
+
+        public void NumberOfPositionsFromWhichObjectIsVisible(ServerAction action) {
+            Vector3[] positions = null;
+            if (action.positions != null && action.positions.Count != 0) {
+                positions = action.positions.ToArray();
+            } else {
+                positions = getReachablePositions();
+            }
+
+            if (!physicsSceneManager.UniqueIdToSimObjPhysics.ContainsKey(action.objectId)) {
+                errorMessage = "Object ID appears to be invalid.";
+                actionFinished(false);
+                return;
+            }
+
+            int numTimesVisible = NumberOfPositionsFromWhichObjectIsVisible(
+                physicsSceneManager.UniqueIdToSimObjPhysics[action.objectId], positions
+            );
 #if UNITY_EDITOR
             Debug.Log(4 * 2 * positions.Length);
             Debug.Log(numTimesVisible);
@@ -7541,6 +7612,60 @@ namespace UnityStandardAssets.Characters.FirstPerson {
                 sop.gameObject.transform.parent = newTopLevelObject.transform;
             }
             StartCoroutine(CoverSurfacesWithHelper(100, newObjects, reachablePositions));
+        }
+
+        public void NumberOfPositionsObjectsOfTypeAreVisibleFrom(ServerAction action) {
+            Vector3[] positions = null;
+            if (action.positions != null && action.positions.Count != 0) {
+                positions = action.positions.ToArray();
+            }
+            else {
+#if UNITY_EDITOR
+                List<SimObjPhysics> toReEnable = new List<SimObjPhysics>();
+                foreach (SimObjPhysics sop in FindObjectsOfType<SimObjPhysics>()) {
+                    if (sop.Type.ToString().ToLower() == action.objectType.ToLower()) {
+                        toReEnable.Add(sop);
+                        sop.gameObject.SetActive(false);
+                    }
+                }
+#endif
+                positions = getReachablePositions();
+#if UNITY_EDITOR
+                foreach (SimObjPhysics sop in toReEnable) {
+                    sop.gameObject.SetActive(true);
+                }
+#endif
+            }
+
+            string objectType = action.objectType;
+
+            List<SimObjPhysics> objectsOfType = new List<SimObjPhysics>();
+            foreach (SimObjPhysics sop in FindObjectsOfType<SimObjPhysics>()) {
+                if (sop.Type.ToString().ToLower() == action.objectType.ToLower()) {
+                    objectsOfType.Add(sop);
+                    sop.gameObject.SetActive(false);
+                }
+            }
+
+            Dictionary<String, int> objectIdToPositionsVisibleFrom = new Dictionary<String, int>();
+            foreach (SimObjPhysics sop in objectsOfType) {
+                sop.gameObject.SetActive(true);
+                objectIdToPositionsVisibleFrom.Add(
+                    sop.UniqueID,
+                    NumberOfPositionsFromWhichObjectIsVisible(sop, positions)
+                );
+#if UNITY_EDITOR
+                Debug.Log(sop.UniqueID);
+                Debug.Log(objectIdToPositionsVisibleFrom[sop.UniqueID]);
+#endif
+                sop.gameObject.SetActive(false);
+            }
+
+            foreach (SimObjPhysics sop in objectsOfType) {
+                sop.gameObject.SetActive(true);
+            }
+
+            actionFinished(true, objectIdToPositionsVisibleFrom);
         }
 
         private IEnumerator SpamObjectsInRoomHelper(int n, List<SimObjPhysics> newObjects) {
