@@ -40,7 +40,7 @@ def push_build(build_archive_name, archive_sha256):
 def _local_build_path(prefix='local'):
     return os.path.join(
         os.getcwd(),
-        'unity/builds/thor-{}-OSXIntel64.app/Contents/MacOS/thor-local-OSXIntel64'.format(prefix)
+        'unity/builds/thor-{0}-OSXIntel64.app/Contents/MacOS/thor-{0}-OSXIntel64'.format(prefix)
     )
 
 
@@ -1043,10 +1043,12 @@ def cache_gridworld(context):
     import ai2thor.controller
     import ai2thor.hands_controller
 
+    scene = "FloorPlan224_physics"
+    local_build_prefix = "10-7"
     env = ai2thor.controller.Controller()
-    env.local_executable_path = _local_build_path()
+    env.local_executable_path = _local_build_path(local_build_prefix)
     env.start(player_screen_width=600, player_screen_height=600)
-    env.reset('FloorPlan223')
+    env.reset(scene)
     grid_size = 0.25
     event = env.step(dict(action='Initialize', agentCount=2, gridSize=grid_size))
     event = env.step(dict(action='GetReachablePositions'))
@@ -1061,15 +1063,30 @@ def cache_gridworld(context):
         z=1.0))
     objectId = event.metadata['actionReturn']
     event = env.step(dict( action='GetReachablePositionsForObject', objectId=objectId))
-    object_reachable_pos = event.metadata['actionReturn']
+    rotation_to_object_reachable_pos = event.metadata['actionReturn']
 
-    hands_controller = ai2thor.hands_controller.Controller(
-        agent_reachable_pos,
-        object_reachable_pos,
-        lifted_object_id=objectId, 
-        lifted_object_type=event.events[0].get_object(objectId)['objectType'])
+    env.step(
+        {
+            "action": "GetUnreachableSilhouetteForObject",
+            "objectId": objectId,
+            "z": 1,
+        }
+    )
+    assert env.last_event.metadata["lastActionSuccess"]
+    object_template_string = env.last_event.metadata[
+        "actionReturn"
+    ]
 
-    event = hands_controller.reset('FloorPlan223')
+    hands_controller = ai2thor.hands_controller.GridWorldController(
+        agent_reachable_pos=agent_reachable_pos,
+        rotation_to_object_reachable_pos=rotation_to_object_reachable_pos,
+        lifted_object_id="Television|1",
+        lifted_object_type="Television",
+        grid_size=0.25,
+        object_template_string=object_template_string
+    )
+
+    event = hands_controller.reset(scene)
     event = hands_controller.step(dict(action='Initialize', agentCount=2, gridSize=0.25))
     event = hands_controller.step(dict(
         action='RandomlyCreateLiftedFurniture',
@@ -1078,5 +1095,5 @@ def cache_gridworld(context):
         y=1.3,
         z=1.0))
 
-    hands_controller.viz_world()
-    event = hands_controller.step(dict(action='RotateRight', agentId=0))
+    from ai2thor.hands_controller import run_demo
+    run_demo(hands_controller)

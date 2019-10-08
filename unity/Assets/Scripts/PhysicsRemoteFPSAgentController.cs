@@ -6190,6 +6190,7 @@ namespace UnityStandardAssets.Characters.FirstPerson {
                 return (float) Math.Floor(mFactor * x) / mFactor;
             }
         }
+
         public void GetReachablePositionsForObject(ServerAction action) {
             if (!physicsSceneManager.UniqueIdToSimObjPhysics.ContainsKey(action.objectId)) {
                 errorMessage = "Object " + action.objectId + " does not seem to exist.";
@@ -6201,26 +6202,37 @@ namespace UnityStandardAssets.Characters.FirstPerson {
             Vector3 startPos = sop.transform.position;
             Quaternion startRot = sop.transform.rotation;
 
-            Bounds b = new Bounds();
-            foreach (Vector3 p in getReachablePositions()) {
+            Vector3[] positions = null;
+            if (action.positions != null && action.positions.Count != 0) {
+                positions = action.positions.ToArray();
+            }
+            else {
+                positions = getReachablePositions();
+            }
+
+            Bounds b = new Bounds(
+                new Vector3(float.PositiveInfinity, float.PositiveInfinity, float.PositiveInfinity),
+                new Vector3(-float.PositiveInfinity, -float.PositiveInfinity, -float.PositiveInfinity)
+            );
+            foreach (Vector3 p in positions) {
                 b.Encapsulate(p);
             }
 
-            float xMin = roundToGridSize(Math.Max(b.min.x - 0.25f, transform.position.x - 14), gridSize, true);
-            float xMax = roundToGridSize(Math.Min(b.max.x + 0.25f, transform.position.x + 14), gridSize, false);
-            float zMin = roundToGridSize(Math.Max(b.min.z - 0.25f, transform.position.z - 14), gridSize, true);
-            float zMax = roundToGridSize(Math.Min(b.max.z + 0.25f, transform.position.z + 14), gridSize, false);
+            float xMin = roundToGridSize(b.min.x - gridSize * 3, gridSize, true);
+            float xMax = roundToGridSize(b.max.x + gridSize * 3, gridSize, false);
+            float zMin = roundToGridSize(b.min.z - gridSize * 3, gridSize, true);
+            float zMax = roundToGridSize(b.max.z + gridSize * 3, gridSize, false);
             // Debug.Log(xMin);
             // Debug.Log(xMax);
             // Debug.Log(zMin);
             // Debug.Log(zMax);
 
-            
+
             List<GameObject> agentGameObjects = new List<GameObject>();
             foreach (BaseFPSAgentController agent in agentManager.agents) {
                 agentGameObjects.Add(agent.gameObject);
             }
-            List<Vector3> reachable = new List<Vector3>();
+            //List<Vector3> reachable = new List<Vector3>();
 
             List<Collider> enabledColliders = new List<Collider>();
             foreach (Collider c in sop.GetComponentsInChildren<Collider>()) {
@@ -6231,21 +6243,23 @@ namespace UnityStandardAssets.Characters.FirstPerson {
             }
 
             sop.BoundingBox.GetComponent<BoxCollider>().enabled = true;
-            for (int i = 0; i <= (int) ((xMax - xMin) / gridSize); i++) {
-                for (int j = 0; j <= (int) ((zMax - zMin) / gridSize); j++) {
-                    Vector3 p = new Vector3(xMin + gridSize * i, startPos.y, zMin + j * gridSize);
-                    sop.transform.position = p;
-                    for (int k = 0; k < 4; k++) {
-                        sop.transform.rotation = Quaternion.Euler(new Vector3(0f, k * 90f, 0f));
+            Dictionary<int, List<Vector3>> reachablePerRotation = new Dictionary<int, List<Vector3>>();
+            for (int k = 0; k < 4; k++) {
+                reachablePerRotation[90 * k] = new List<Vector3>();
+                sop.transform.rotation = Quaternion.Euler(new Vector3(0f, k * 90f, 0f));
+
+                for (int i = 0; i <= (int) ((xMax - xMin) / gridSize); i++) {
+                    for (int j = 0; j <= (int) ((zMax - zMin) / gridSize); j++) {
+                        Vector3 p = new Vector3(xMin + gridSize * i, startPos.y, zMin + j * gridSize);
+                        sop.transform.position = p;
                         if (!UtilityFunctions.isObjectColliding(sop.BoundingBox.gameObject, agentGameObjects)) {
                             // #if UNITY_EDITOR
                             // Debug.Log(p);
                             // #endif
-                            #if UNITY_EDITOR
-                            Debug.DrawLine(p, new Vector3(p.x, p.y + 0.3f, p.z), Color.red, 100000f);
-                            #endif
-                            reachable.Add(p);
-                            break;
+#if UNITY_EDITOR
+                            Debug.DrawLine(p, new Vector3(p.x, p.y + 0.3f, p.z) + sop.transform.forward * 0.3f, Color.red, 60f);
+#endif
+                            reachablePerRotation[90 * k].Add(p);
                         }
                     }
                 }
@@ -6258,10 +6272,13 @@ namespace UnityStandardAssets.Characters.FirstPerson {
             sop.transform.position = startPos;
             sop.transform.rotation = startRot;
 
-            #if UNITY_EDITOR
-            Debug.Log(reachable.Count);
-            #endif
-            actionFinished(true, reachable.ToArray());
+#if UNITY_EDITOR
+            Debug.Log(reachablePerRotation[0].Count);
+            Debug.Log(reachablePerRotation[90].Count);
+            Debug.Log(reachablePerRotation[180].Count);
+            Debug.Log(reachablePerRotation[270].Count);
+#endif
+            actionFinished(true, reachablePerRotation);
         }
 
         public RaycastHit[] capsuleCastAllForAgent(
