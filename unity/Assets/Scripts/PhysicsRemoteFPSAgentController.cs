@@ -6413,26 +6413,59 @@ namespace UnityStandardAssets.Characters.FirstPerson {
             }
         }
 
-         public void RandomlyMoveAgent(ServerAction action) {
-            UnityEngine.Random.InitState(action.randomSeed);
+        public void RandomlyMoveAgent(ServerAction action) {
             reachablePositions = getReachablePositions();
             var orientations = new float[]{
                 0,
-                90, 
+                90,
                 180,
                 270
             };
-            var posIndex =  UnityEngine.Random.Range (0, reachablePositions.Length);
-            var rotIndex = UnityEngine.Random.Range (0, orientations.Length);
-            this.transform.position = reachablePositions[posIndex];
-            this.transform.Rotate(0, orientations[rotIndex], 0);
-           
+            orientations.Shuffle_(action.randomSeed);
+            reachablePositions.Shuffle_(action.randomSeed);
+
+            bool success = false;
+            foreach (Vector3 position in reachablePositions) {
+                foreach (float rotation in orientations) {
+                    if (handObjectCanFitInPosition(position, rotation)) {
+                        this.transform.position = position;
+                        this.transform.rotation = Quaternion.Euler(0.0f, rotation, 0.0f);
+                        success = true;
+                        break;
+                    }
+                }
+            }
+
             if (errorMessage != "") {
+                actionFinished(false);
+            } else if (!success) {
+                errorMessage = "Could not find a position in which the agent and object fit.";
                 actionFinished(false);
             } else {
                 actionFinished(true, reachablePositions);
             }
         }
+
+        //  public void RandomlyMoveAgent(ServerAction action) {
+        //     UnityEngine.Random.InitState(action.randomSeed);
+        //     reachablePositions = getReachablePositions();
+        //     var orientations = new float[]{
+        //         0,
+        //         90, 
+        //         180,
+        //         270
+        //     };
+        //     var posIndex =  UnityEngine.Random.Range (0, reachablePositions.Length);
+        //     var rotIndex = UnityEngine.Random.Range (0, orientations.Length);
+        //     this.transform.position = reachablePositions[posIndex];
+        //     this.transform.Rotate(0, orientations[rotIndex], 0);
+           
+        //     if (errorMessage != "") {
+        //         actionFinished(false);
+        //     } else {
+        //         actionFinished(true, reachablePositions);
+        //     }
+        // }
 
         private bool ancestorHasName(GameObject go, string name) {
             if (go.name == name) {

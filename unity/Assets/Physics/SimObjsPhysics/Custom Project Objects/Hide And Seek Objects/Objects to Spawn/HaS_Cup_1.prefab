@@ -309,6 +309,7 @@ MonoBehaviour:
   salientMaterials: 02000000
   CurrentTemperature: 0
   HowManySecondsUntilRoomTemp: 10
+  inMotion: 0
   ContainedObjectReferences: []
 --- !u!54 &54716517968154962
 Rigidbody:

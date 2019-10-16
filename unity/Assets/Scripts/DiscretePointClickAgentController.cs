@@ -35,7 +35,7 @@ public int objectVariation;
             highlightController = new ObjectHighlightController(PhysicsController, PhysicsController.maxVisibleDistance, false, 0, 0, true);
             highlightController.SetDisplayTargetText(false);
 
-            SpawnObjectToHide("{\"objectType\": \"Plunger\", \"objectVariation\": 1}");
+            //SpawnObjectToHide("{\"objectType\": \"Knife\", \"objectVariation\": 1}");
         }
 
         public void OnEnable() {
