@@ -939,6 +939,25 @@ namespace UnityStandardAssets.Characters.FirstPerson {
             }
         }
 
+        public void RotateRightSmooth(ServerAction controlCommand) {
+            if (CheckIfAgentCanTurn(90)) {
+                DefaultAgentHand(controlCommand);
+                StartCoroutine(InterpolateRotation(this.GetRotateQuaternion(1), controlCommand.timeStep));
+            } else {
+                actionFinished(false);
+            }
+
+        }
+
+        public void RotateLeftSmooth(ServerAction controlCommand) {
+            if (CheckIfAgentCanTurn(-90)) {
+                DefaultAgentHand(controlCommand);
+                StartCoroutine(InterpolateRotation(this.GetRotateQuaternion(-1), controlCommand.timeStep));
+            } else {
+                actionFinished(false);
+            }
+        }
+
         //checks if agent is clear to rotate left/right without object in hand hitting anything
         public bool CheckIfAgentCanTurn(int direction) {
             bool result = true;
@@ -4124,7 +4143,7 @@ namespace UnityStandardAssets.Characters.FirstPerson {
             actionFinished(true);
         }
 
-        private void UpdateDisplayGameObject(GameObject go, bool display) {
+        public void UpdateDisplayGameObject(GameObject go, bool display) {
             if (go != null) {
                 foreach (MeshRenderer mr in go.GetComponentsInChildren<MeshRenderer>() as MeshRenderer[]) {
                     if (!initiallyDisabledRenderers.Contains(mr.GetInstanceID())) {
@@ -4554,6 +4573,22 @@ namespace UnityStandardAssets.Characters.FirstPerson {
                 }
             }
             return anyStillRunning;
+        }
+
+        protected IEnumerator InterpolateRotation(Quaternion targetRotation, float seconds) {
+            var time = Time.time;
+            var newTime = time;
+            while (newTime - time < seconds) {
+                yield return null;
+                newTime = Time.time;
+                var diffSeconds = newTime - time;
+                var alpha = Mathf.Min(diffSeconds / seconds, 1.0f);
+                this.transform.rotation = Quaternion.Lerp(this.transform.rotation, targetRotation, alpha);
+                
+            }
+            Debug.Log("Rotate action finished! " + (newTime - time) );
+            //  this.transform.rotation = targetRotation;
+            actionFinished(true);
         }
 
         protected IEnumerator InteractAndWait(List<CanOpen_Object> coos, bool freezeContained = false) {
@@ -5486,7 +5521,7 @@ namespace UnityStandardAssets.Characters.FirstPerson {
         ///// Crouch and Stand /////
         ////////////////////////////
 
-        protected bool isStanding() {
+        public bool isStanding() {
             return standingLocalCameraPosition == m_Camera.transform.localPosition;
         }
 
@@ -6378,6 +6413,27 @@ namespace UnityStandardAssets.Characters.FirstPerson {
             }
         }
 
+         public void RandomlyMoveAgent(ServerAction action) {
+            UnityEngine.Random.InitState(action.randomSeed);
+            reachablePositions = getReachablePositions();
+            var orientations = new float[]{
+                0,
+                90, 
+                180,
+                270
+            };
+            var posIndex =  UnityEngine.Random.Range (0, reachablePositions.Length);
+            var rotIndex = UnityEngine.Random.Range (0, orientations.Length);
+            this.transform.position = reachablePositions[posIndex];
+            this.transform.Rotate(0, orientations[rotIndex], 0);
+           
+            if (errorMessage != "") {
+                actionFinished(false);
+            } else {
+                actionFinished(true, reachablePositions);
+            }
+        }
+
         private bool ancestorHasName(GameObject go, string name) {
             if (go.name == name) {
                 return true;
@@ -6501,7 +6557,7 @@ namespace UnityStandardAssets.Characters.FirstPerson {
                 physicsSceneManager.AddToObjectsInScene(so);
             }
 
-            actionFinished(true);
+            actionFinished(true, so.uniqueID);
         }
 
         protected SimObjPhysics createObjectAtLocation(string objectType, Vector3 targetPosition, Vector3 targetRotation, int objectVariation = 1) {

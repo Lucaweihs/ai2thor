@@ -622,6 +622,14 @@ namespace UnityStandardAssets.Characters.FirstPerson
                         PhysicsController.ProcessControlCommand(action);
                         break;
                     }
+                case "rma": 
+                    {
+                       ServerAction action = new ServerAction();
+                       action.action = "RandomlyMoveAgent";
+                       action.randomSeed = int.Parse(splitcommand[1]);
+                        PhysicsController.ProcessControlCommand(action);
+                       break; 
+                    }
                 case "spawnfloor": 
                     {
                         ServerAction action = new ServerAction();
