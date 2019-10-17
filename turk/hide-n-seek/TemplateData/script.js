@@ -21,6 +21,8 @@ let isTurkSanbox = 'sandbox' in getParams && getParams['sandbox'].toLowerCase() 
 const turkSandboxUrl = 'https://workersandbox.mturk.com/mturk/externalSubmit';
 const turkUrl = 'https://www.mturk.com/mturk/externalSubmit';
 
+let pickupFailTimeout = false;
+let hasObject = false;
 $(
   () => {
     // Async loading disabled due to possible race conditions
@@ -44,7 +46,20 @@ $(
             $("#instruction-3").html('When you are ready, move the object (see Shift controls) to place it more precisely, click on it to drop it.');
             $("#instruction-4").html(`If you're happy with your hiding spot click the <strong class="green-text">Finish</strong> button above. Or <strong class="red-text">Reset</strong> to start over.`);
              $("#instruction-5").html("If a door/drawer opens and closes, it means you're in the way! Move back and try again.");
+             $("#instruction-6").html("If you're clicking on the object and it's not being picked up, try moving closer to the object! (within 1.5 meters)");
             $("#instructions-hider").show();
+
+            $(document).keypress(function(event) {
+                if (event.keyCode === 32) {
+                if(event.shiftKey && !hasObject){
+                    pickupFailTimeout = setTimeout(() => {
+                        $("#last-action-text").html(`Action Failed: <strong class="red-text">Pick Up Failed</strong>`).show();
+                    }, 800)
+                } else {
+
+                }
+                }
+            });
           initGame(window.game_url);
         }
         else {
@@ -108,6 +123,8 @@ window.onUnityMetadata = function(metadata) {
 
    let jsonMeta = JSON.parse(metadata);
 
+   let actionSuccess = jsonMeta.agents[0].lastActionSuccess;
+
   // FIRST init event
    if (jsonMeta.agents[0].lastAction === null) {
 
@@ -156,7 +173,7 @@ window.onUnityMetadata = function(metadata) {
         }
    }
    else {
-     if (jsonMeta.agents[0].lastAction === "CreateObject" && !jsonMeta.agents[0].lastActionSuccess) {
+     if (jsonMeta.agents[0].lastAction === "CreateObject" && !actionSuccess) {
         throw `Action '${jsonMeta.agents[0].lastAction}' failed with error: "${jsonMeta.agents[0].errorMessage}"' `
      }
    }
@@ -174,6 +191,13 @@ window.onUnityMetadata = function(metadata) {
            standing: agentMetadata.isStanding
         }
     });
+
+    let className = actionSuccess ? 'green-text' : 'red-text';
+    let lastActionStatus = actionSuccess ? "Succeeded" : "Failed";
+     $("#last-action-text").html(`Action ${lastActionStatus}: <strong class="${className}">${jsonMeta.agents[0].lastAction}</strong>`).show();
+     if (!actionSuccess) {
+         console.log(jsonMeta)
+     }
 
       handleEvent(jsonMeta);
    lastMetadadta = jsonMeta;
@@ -227,14 +251,13 @@ function Move(metadata) {
   outputData.trayectory.push(metadata.agents[0].agent.position);
 }
 
-function DropObject(metadata) {
-   $("#finish-hit").attr("disabled", false);
-}
-
 function CreateObject(metadata) {
   let agentMetadata = metadata.agents[0];
   objectId = agentMetadata.actionReturn;
+  hasObject = true;
   outputData['target_id'] = objectId;
+
+  gameInstance.SendMessage('FPSController', 'DisableObjectCollisionWithAgent', objectId);
 
   $("#finish-hit").click((e) => {
       // The callback for ExhaustiveSearchForItem action will call submitHit
@@ -310,6 +333,7 @@ function RegisterAgentPosition(metadata) {
 function CreateObjectAtLocation(metadata) {
     let agentMetadata = metadata.agents[0];
     gameInstance.SendMessage('FPSController', 'SetOnlyObjectIdSeeker', agentMetadata.actionReturn);
+    gameInstance.SendMessage('FPSController', 'DisableObjectCollisionWithAgent', agentMetadata.actionReturn);
     objectId = gameConfig.target_id;
 }
 
@@ -322,6 +346,25 @@ function ExhaustiveSearchForItem(metadata) {
     submitHit(metadata);
 }
 
+function PickupObject(metadata) {
+     let agentMetadata = metadata.agents[0];
+     hasObject = agentMetadata.lastActionSuccess;
+    if (pickupFailTimeout) {
+        //console.log("Clear Timeout!!!!")
+        clearTimeout(pickupFailTimeout);
+    }
+}
+
+function DropObject(metadata) {
+    let agentMetadata = metadata.agents[0];
+    hasObject = !agentMetadata.lastActionSuccess;
+    if (pickupFailTimeout) {
+        //console.log("Clear Timeout!!!!")
+        clearTimeout(pickupFailTimeout);
+    }
+   $("#finish-hit").attr("disabled", false);
+}
+
 let eventHandlers = {
     hider: {
       MoveAhead: Move,
@@ -332,7 +375,8 @@ let eventHandlers = {
       CreateObject: CreateObject,
       OpenObject: OpenObject,
       RandomlyMoveAgent: RegisterAgentPosition,
-      ExhaustiveSearchForItem: ExhaustiveSearchForItem
+      ExhaustiveSearchForItem: ExhaustiveSearchForItem,
+      PickupObject: PickupObject
     },
     seeker: {
       MoveAhead: Move,

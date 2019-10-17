@@ -22,7 +22,8 @@ public int objectVariation;
         private bool handMode = false;
         private bool visibleObject = true;
         private bool hidingPhase = false;
-        // private string onlyPickableObjectId = null;
+        public string onlyPickableObjectId = null;
+        public bool disableCollistionWithPickupObject = false;
         void Start() 
         {
             var Debug_Canvas = GameObject.Find("DebugCanvasPhysics");
@@ -35,7 +36,7 @@ public int objectVariation;
             highlightController = new ObjectHighlightController(PhysicsController, PhysicsController.maxVisibleDistance, false, 0, 0, true);
             highlightController.SetDisplayTargetText(false);
 
-            //SpawnObjectToHide("{\"objectType\": \"Knife\", \"objectVariation\": 1}");
+            // SpawnObjectToHide("{\"objectType\": \"Plunger\", \"objectVariation\": 1}");
         }
 
         public void OnEnable() {
@@ -73,18 +74,23 @@ public int objectVariation;
                   objectVariation = objectData.objectVariation
               };
             PhysicsController.ProcessControlCommand(action);
-            this.highlightController.SetOnlyPickableId(objectData.objectType + "|" + objectData.objectVariation);
+            onlyPickableObjectId = objectData.objectType + "|" + objectData.objectVariation;
+            this.highlightController.SetOnlyPickableId(onlyPickableObjectId);
+            // DisableObjectCollisionWithAgent(onlyPickableObjectId);
         }
 
          public void SetOnlyPickableObject(string objectId) {
+             onlyPickableObjectId = objectId;
             this.highlightController.SetOnlyPickableId(objectId);
         }
 
         public void SetOnlyObjectId(string objectId) {
+            onlyPickableObjectId = objectId;
             this.highlightController.SetOnlyPickableId(objectId);
         }
 
          public void SetOnlyObjectIdSeeker(string objectId) {
+             onlyPickableObjectId = objectId;
             this.highlightController.SetOnlyPickableId(objectId, true);
         }
 
@@ -94,6 +100,21 @@ public int objectVariation;
                 randomSeed = randomSeed
             };
             PhysicsController.ProcessControlCommand(action);
+        }
+
+        public void DisableObjectCollisionWithAgent(string objectId) {
+            var physicsSceneManager = FindObjectOfType<PhysicsSceneManager>();
+            if (!physicsSceneManager.UniqueIdToSimObjPhysics.ContainsKey(objectId)) {
+                return;
+            }
+            
+            SimObjPhysics target = physicsSceneManager.UniqueIdToSimObjPhysics[objectId];
+            disableCollistionWithPickupObject = true;
+            foreach (Collider c0 in this.GetComponentsInChildren<Collider>()) {
+                foreach (Collider c1 in target.GetComponentsInChildren<Collider>()) {
+                    Physics.IgnoreCollision(c0, c1);
+                }
+            }
         }
 
         public void Step(string serverAction)
@@ -115,6 +136,7 @@ public int objectVariation;
                 highlightController.MouseControls();
 
                 if (PhysicsController.actionComplete) {
+                        handMode = Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift);
                         float FlyMagnitude = 1.0f;
                         float WalkMagnitude = 0.25f;
                         if (!handMode && !hidingPhase) {
@@ -245,12 +267,7 @@ public int objectVariation;
                             }
                         }
 
-                         if (Input.GetKeyDown(KeyCode.LeftShift) || Input.GetKeyDown(KeyCode.RightShift)) {
-                            handMode = true;
-                         }
-                         if (Input.GetKeyUp(KeyCode.LeftShift) || Input.GetKeyUp(KeyCode.RightShift)){
-                            handMode = false;
-                         }
+                        
 
                         if (this.PhysicsController.WhatAmIHolding() != null  && handMode)
                         {
@@ -295,6 +312,17 @@ public int objectVariation;
                                 this.PhysicsController.ProcessControlCommand(action);
                             }
                         }
+                        else if (handMode) {
+                            if (Input.GetKeyDown(KeyCode.Space)) {
+                                var withinReach = PhysicsController.FindObjectInVisibleSimObjPhysics(onlyPickableObjectId) != null;
+                                if (withinReach) {
+                                    ServerAction action = new ServerAction();
+                                    action.objectId = onlyPickableObjectId;
+                                    action.action = "PickupObject";
+                                    PhysicsController.ProcessControlCommand(action);
+                                }
+                            }
+                        }
                         if (Input.GetKeyDown(KeyCode.LeftControl) || Input.GetKeyDown(KeyCode.C) || Input.GetKeyDown(KeyCode.RightControl) ) {
                             ServerAction action = new ServerAction();
                             if (this.PhysicsController.isStanding()) {
@@ -309,10 +337,10 @@ public int objectVariation;
                         }
 
                         if (PhysicsController.WhatAmIHolding() != null) {
-                             if (Input.GetKeyDown(KeyCode.Space) && !hidingPhase) {
+                             if (Input.GetKeyDown(KeyCode.Space) && !hidingPhase && !handMode) {
                                 
                                  visibleObject = !visibleObject;
-                                  Debug.Log("Calling disply with "+ visibleObject);
+                                 // Debug.Log("Calling disply with "+ visibleObject);
                                  var go = PhysicsController.WhatAmIHolding();
                                 PhysicsController.UpdateDisplayGameObject( go, visibleObject);
                                 var layer = go.layer;

@@ -2504,10 +2504,18 @@ namespace UnityStandardAssets.Characters.FirstPerson {
 
                     //including "Untagged" tag here so that the agent can't move through objects that are transparent
                     if (res.transform.GetComponent<SimObjPhysics>() || res.transform.tag == "Structure" || res.transform.tag == "Untagged") {
-                        int thisAgentNum = agentManager.agents.IndexOf(this);
-                        errorMessage = res.transform.name + " is blocking Agent " + thisAgentNum.ToString() + " from moving " + orientation;
-                        //the moment we find a result that is blocking, return false here
-                        return false;
+                        var simObj = res.transform.GetComponent<SimObjPhysics>();
+                        //Debug.Log(simObj.uniqueID + " other " + this.GetComponent<DiscretePointClickAgentController>().onlyPickableObjectId);
+                        if (simObj != null && this.GetComponent<DiscretePointClickAgentController>().disableCollistionWithPickupObject && simObj.uniqueID == this.GetComponent<DiscretePointClickAgentController>().onlyPickableObjectId) {
+                           
+                        }
+                        else {
+
+                            int thisAgentNum = agentManager.agents.IndexOf(this);
+                            errorMessage = res.transform.name + " is blocking Agent " + thisAgentNum.ToString() + " from moving " + orientation;
+                            //the moment we find a result that is blocking, return false here
+                            return false;
+                        }
                     }
                 }
             }
@@ -2711,6 +2719,34 @@ namespace UnityStandardAssets.Characters.FirstPerson {
                 OpenObject(action);
             } else {
                 errorMessage = hit.transform.gameObject.name + " is not interactable.";
+                actionFinished(false);
+            }
+        }
+
+        public void GetAwayFromObject(ServerAction action) {
+            if (physicsSceneManager.UniqueIdToSimObjPhysics.ContainsKey(action.objectId)) {
+                SimObjPhysics sop = physicsSceneManager.UniqueIdToSimObjPhysics[action.objectId];
+                int k = 0;
+                while (isAgentCapsuleCollidingWith(sop.gameObject) && k < 40) {
+                    k++;
+                    Vector3[] dirs = {
+                        transform.forward, -transform.forward, transform.right, -transform.right
+                    };
+                    dirs.Shuffle_(k);
+
+                    sop.gameObject.SetActive(false);
+                    moveInDirection(dirs[0] * gridSize);
+                    sop.gameObject.SetActive(true);
+                }
+                if (isAgentCapsuleCollidingWith(sop.gameObject)) {
+                    errorMessage = "Could not get away from " + sop.UniqueID;
+                    actionFinished(false);
+                    return;
+                }
+                actionFinished(true);
+            }
+            else {
+                errorMessage = "No object with given id could be found to disable collisions with.";
                 actionFinished(false);
             }
         }

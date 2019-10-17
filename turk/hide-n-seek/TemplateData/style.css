@@ -222,3 +222,8 @@ p, li, th, td {
 .green-text {
     background-color: #74b255;
 }
+
+.action-text {
+    margin-top: -2px;
+    font-size: 0.9em;
+}
