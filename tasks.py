@@ -1069,8 +1069,8 @@ def webgl_deploy_turk(ctx, bucket='thor-turk', target_dir='hide-n-seek', scenes=
         "kitchens": (1, 30),
         "livingRooms": (201, 230),
         "bedrooms": (301, 330),
-        "bathrooms": (401, 430),
-        "foyers": (501, 530)
+        "bathrooms": (401, 430)
+        # "foyers": (501, 530)
     }
 
     if all:

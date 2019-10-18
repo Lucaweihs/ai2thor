@@ -117,6 +117,22 @@ public int objectVariation;
             }
         }
 
+        public void SetObjectVisible(bool visible) {
+            
+                                 visibleObject = visible;
+                                 // Debug.Log("Calling disply with "+ visibleObject);
+                                 var go = PhysicsController.WhatAmIHolding();
+                                PhysicsController.UpdateDisplayGameObject( go, visibleObject);
+                                var layer = go.layer;
+                                if (!visibleObject) {
+                                    // go.layer = LayerMask.NameToLayer("SimObjInvisible");
+                                    SetLayerRecursively(go, LayerMask.NameToLayer("SimObjInvisible"));
+                                }
+                                else {
+                                    SetLayerRecursively(go, LayerMask.NameToLayer("SimObjVisible"));
+                                }
+        }
+
         public void Step(string serverAction)
 		{
 			ServerAction controlCommand = new ServerAction();
@@ -304,6 +320,7 @@ public int objectVariation;
                             }
 
                             if (Input.GetKeyDown(KeyCode.Space)) {
+                                SetObjectVisible(true);
                                   var action = new ServerAction
                                     {
                                         action = "DropHandObject",
@@ -323,7 +340,7 @@ public int objectVariation;
                                 }
                             }
                         }
-                        if (Input.GetKeyDown(KeyCode.LeftControl) || Input.GetKeyDown(KeyCode.C) || Input.GetKeyDown(KeyCode.RightControl) ) {
+                        if ((Input.GetKeyDown(KeyCode.LeftControl) || Input.GetKeyDown(KeyCode.C) || Input.GetKeyDown(KeyCode.RightControl) ) && PhysicsController.actionComplete) {
                             ServerAction action = new ServerAction();
                             if (this.PhysicsController.isStanding()) {
                                 action.action = "Crouch";
@@ -331,39 +348,41 @@ public int objectVariation;
                             }
                             else {
                                  action.action = "Stand";
+                                 PhysicsController.ProcessControlCommand(action);
                             }
-                            PhysicsController.ProcessControlCommand(action);
+                            
 
                         }
 
                         if (PhysicsController.WhatAmIHolding() != null) {
                              if (Input.GetKeyDown(KeyCode.Space) && !hidingPhase && !handMode) {
                                 
-                                 visibleObject = !visibleObject;
-                                 // Debug.Log("Calling disply with "+ visibleObject);
-                                 var go = PhysicsController.WhatAmIHolding();
-                                PhysicsController.UpdateDisplayGameObject( go, visibleObject);
-                                var layer = go.layer;
-                                if (!visibleObject) {
-                                    // go.layer = LayerMask.NameToLayer("SimObjInvisible");
-                                    SetLayerRecursively(go, LayerMask.NameToLayer("SimObjInvisible"));
-                                }
-                                else {
-                                    SetLayerRecursively(go, LayerMask.NameToLayer("SimObjVisible"));
-                                }
+                                SetObjectVisible(!visibleObject);
+                                //  visibleObject = !visibleObject;
+                                //  // Debug.Log("Calling disply with "+ visibleObject);
+                                //  var go = PhysicsController.WhatAmIHolding();
+                                // PhysicsController.UpdateDisplayGameObject( go, visibleObject);
+                                // var layer = go.layer;
+                                // if (!visibleObject) {
+                                //     // go.layer = LayerMask.NameToLayer("SimObjInvisible");
+                                //     SetLayerRecursively(go, LayerMask.NameToLayer("SimObjInvisible"));
+                                // }
+                                // else {
+                                //     SetLayerRecursively(go, LayerMask.NameToLayer("SimObjVisible"));
+                                // }
                                 // Debug.Log("prev layer " + layer + " new layer " + go.layer);
                                 // var go = PhysicsController.WhatAmIHolding();
                                 //  foreach (MeshRenderer mr in go.GetComponentsInChildren<MeshRenderer>() as MeshRenderer[]) {
                                 //      mr.enabled = !visibleObject;
                                 //  }
                              }
-                              if (Input.GetKeyDown(KeyCode.H)) { 
-                                  // HIDING PHASE
-                                  this.hidingPhase = true;
-                                  visibleObject = true;
-                                  PhysicsController.UpdateDisplayGameObject( PhysicsController.WhatAmIHolding(), true);
+                            //   if (Input.GetKeyDown(KeyCode.H)) { 
+                            //       // HIDING PHASE
+                            //       this.hidingPhase = true;
+                            //       visibleObject = true;
+                            //       PhysicsController.UpdateDisplayGameObject( PhysicsController.WhatAmIHolding(), true);
                          
-                              }
+                            //   }
                         }
             }
         }
