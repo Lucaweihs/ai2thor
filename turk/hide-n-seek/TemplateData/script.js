@@ -72,7 +72,8 @@ $(
                   $("#message-text").show();
                   // gameConfig['agentPosition']
                   let objectHtml = `<strong class="important-text">${gameConfig.object_type}</strong>`;
-                  $("#instruction-text").html(`You have to find a ${objectHtml}`);
+                  let lowercaseObjectName = gameConfig.object_type.toLowerCase();
+                  $("#instruction-text").html(`You have to find a ${objectHtml} <div class="seeker-image-container ${lowercaseObjectName}"><img class="seeker-image" src="TemplateData/images/${lowercaseObjectName}.png"/></div>`);
                   $("#instruction-2").html(`Move around in the room, open drawers and cabinets to look for a ${objectHtml}.`);
                   $("#instruction-3").html('Click on it once you have found it.');
                   $("#instruction-4").html(`If you cannot find the ${objectHtml} after some time, you can click the <strong class="red-text">Give Up</strong> button above.`);
@@ -149,7 +150,17 @@ window.onUnityMetadata = function(metadata) {
             );
 
         if (hider) {
-            gameInstance.SendMessage('FPSController', 'SpawnAgent', spawnRandomSeed);
+            //gameInstance.SendMessage('FPSController', 'SpawnAgent', spawnRandomSeed);
+
+
+            let objectName = getParams['object'];
+            let objectVariation = parseInt(getParams['variation']);
+            gameInstance.SendMessage('FPSController', 'SpawnObjectToHide',  JSON.stringify(
+                    {
+                              objectType: objectName,
+                              objectVariation: objectVariation,
+                    }
+              ));
         }
         else {
             gameInstance.SendMessage('FPSController', 'Step', JSON.stringify({
@@ -257,6 +268,8 @@ function CreateObject(metadata) {
   hasObject = true;
   outputData['target_id'] = objectId;
 
+  gameInstance.SendMessage('FPSController', 'SpawnAgent', spawnRandomSeed);
+
   gameInstance.SendMessage('FPSController', 'DisableObjectCollisionWithAgent', objectId);
 
   $("#finish-hit").click((e) => {
@@ -319,15 +332,15 @@ function RegisterAgentPosition(metadata) {
         "horizon": agent.cameraHorizon,
         "standing": agentMetadata.isStanding
     };
-   let objectName = getParams['object'];
-   let objectVariation = parseInt(getParams['variation']);
-   c = agentMetadata.actionReturn;
-    gameInstance.SendMessage('FPSController', 'SpawnObjectToHide',  JSON.stringify(
-            {
-                      objectType: objectName,
-                      objectVariation: objectVariation,
-            }
-      ));
+   // let objectName = getParams['object'];
+   // let objectVariation = parseInt(getParams['variation']);
+   // c = agentMetadata.actionReturn;
+   //  gameInstance.SendMessage('FPSController', 'SpawnObjectToHide',  JSON.stringify(
+   //          {
+   //                    objectType: objectName,
+   //                    objectVariation: objectVariation,
+   //          }
+   //    ));
 }
 
 function CreateObjectAtLocation(metadata) {
@@ -347,6 +360,7 @@ function ExhaustiveSearchForItem(metadata) {
 }
 
 function PickupObject(metadata) {
+    $("#finish-hit").attr("disabled", true);
      let agentMetadata = metadata.agents[0];
      hasObject = agentMetadata.lastActionSuccess;
     if (pickupFailTimeout) {

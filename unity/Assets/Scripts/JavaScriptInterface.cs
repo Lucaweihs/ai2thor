@@ -1,8 +1,11 @@
 ﻿using UnityEngine;
 using System.Runtime.InteropServices;
+using UnityStandardAssets.Characters.FirstPerson;
 
 
 public class JavaScriptInterface : MonoBehaviour {
+
+    private PhysicsRemoteFPSAgentController PhysicsController;
 
     [DllImport("__Internal")]
     private static extern void Init();
@@ -28,8 +31,16 @@ public class JavaScriptInterface : MonoBehaviour {
 
     void Start()
     {
+        PhysicsController = gameObject.GetComponent<PhysicsRemoteFPSAgentController>();
         Init();
 
         Debug.Log("Calling store data");
     }
+
+     public void Step(string serverAction)
+		{
+			ServerAction controlCommand = new ServerAction();
+			JsonUtility.FromJsonOverwrite(serverAction, controlCommand);
+			PhysicsController.ProcessControlCommand(controlCommand);
+		}
 }

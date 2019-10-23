@@ -1064,7 +1064,7 @@ def webgl_deploy_all(ctx, verbose=False, individual_rooms=False):
             webgl_deploy(ctx, source_dir=build_dir, target_dir=key, verbose=verbose)
 
 @task
-def webgl_deploy_turk(ctx, bucket='thor-turk', target_dir='hide-n-seek', scenes='', verbose=False, all=False):
+def webgl_deploy_turk(ctx, bucket='thor-turk', target_dir='hide-n-seek', scenes='', verbose=False, all=False, deploy_skip=False):
     rooms = {
         "kitchens": (1, 30),
         "livingRooms": (201, 230),
@@ -1092,7 +1092,8 @@ def webgl_deploy_turk(ctx, bucket='thor-turk', target_dir='hide-n-seek', scenes=
         webgl_build(ctx, scenes=floor_plan_name, directory=build_dir, turk_build=True)
         if verbose:
             print("Deploying room '{}'...".format(floor_plan_name))
-        webgl_deploy(ctx, bucket=bucket,  source_dir=build_dir, target_dir=target_s3_dir, verbose=verbose, extensions_no_cache='.css')
+        if not deploy_skip:
+            webgl_deploy(ctx, bucket=bucket,  source_dir=build_dir, target_dir=target_s3_dir, verbose=verbose, extensions_no_cache='.css')
 
         # else:
         #     webgl_build(ctx, room_ranges=range_str, directory=build_dir)

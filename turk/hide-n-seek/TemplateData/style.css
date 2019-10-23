@@ -227,3 +227,19 @@ p, li, th, td {
     margin-top: -2px;
     font-size: 0.9em;
 }
+
+.seeker-image  {
+    width: 100%;
+    height: auto;
+    display: block;
+}
+
+.seeker-image-container {
+    width: 50px;
+}
+.seeker-image-container.knife {
+    width: 100px;
+}
+.seeker-image-container {
+    width: 50px;
+}
