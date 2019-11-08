@@ -37,6 +37,11 @@ public class JavaScriptInterface : MonoBehaviour {
         Debug.Log("Calling store data");
     }
 
+    public void GetRenderPath()
+    {
+        SendMetadata("" + GetComponentInChildren<Camera>().actualRenderingPath);
+    }
+
      public void Step(string serverAction)
 		{
 			ServerAction controlCommand = new ServerAction();
