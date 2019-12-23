@@ -24,7 +24,7 @@ $(() => {
     let redirect = url.join("/") ;
     console.log(url);
     // window.location.pathname = "/player.html"
-    window.location = `${redirect}?role=${role}&random=true&game_set=${getParams['game_set']}`;
+    window.location = `${redirect}?role=${role}&random=true&game_set=${getParams['game_set']}&giveUpEnableSeconds=4`;
 
   }
 
