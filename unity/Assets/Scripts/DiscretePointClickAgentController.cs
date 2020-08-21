@@ -24,6 +24,9 @@ public int objectVariation;
         private bool hidingPhase = false;
         public string onlyPickableObjectId = null;
         public bool disableCollistionWithPickupObject = false;
+        private bool continuousMove = true;
+        private float continuousMoveTimeSeconds = 0.2f;
+        private string clickAction = "PickupObject";
         void Start() 
         {
             var Debug_Canvas = GameObject.Find("DebugCanvasPhysics");
@@ -33,7 +36,7 @@ public int objectVariation;
             Cursor.lockState = CursorLockMode.None;
             Debug_Canvas.GetComponent<Canvas>().enabled = true; 
 
-            highlightController = new ObjectHighlightController(PhysicsController, PhysicsController.maxVisibleDistance, false, 0, 0, true);
+            highlightController = new ObjectHighlightController(PhysicsController, PhysicsController.maxVisibleDistance, false, 0, 0, true, null, this.clickAction);
             highlightController.SetDisplayTargetText(false);
 
             // SpawnObjectToHide("{\"objectType\": \"Plunger\", \"objectVariation\": 1}");
@@ -84,6 +87,11 @@ public int objectVariation;
             this.highlightController.SetOnlyPickableId(objectId);
         }
 
+        public void SetContinuousMove(bool continuous, float continuousMoveTimeSeconds = 0.5f) {
+            this.continuousMove = continuous;
+            this.continuousMoveTimeSeconds = continuousMoveTimeSeconds;
+        }
+
         public void SetOnlyObjectId(string objectId) {
             onlyPickableObjectId = objectId;
             this.highlightController.SetOnlyPickableId(objectId);
@@ -92,6 +100,11 @@ public int objectVariation;
          public void SetOnlyObjectIdSeeker(string objectId) {
              onlyPickableObjectId = objectId;
             this.highlightController.SetOnlyPickableId(objectId, true);
+        }
+
+        public void SetClickAction(string action) {
+            this.clickAction = action;
+            this.highlightController.SetPickupAction(action);
         }
 
         public void SpawnAgent(int randomSeed) {
@@ -156,7 +169,9 @@ public int objectVariation;
                         float FlyMagnitude = 1.0f;
                         float WalkMagnitude = 0.25f;
                         if (!handMode && !hidingPhase) {
-                            if(Input.GetKeyDown(KeyCode.W))
+                            //Func<KeyCode, bool> keyPressedFunc = (x) => Input.GetKey(x);
+                            var keyPressedFunc = this.continuousMove ? (Func<KeyCode, bool>)((x) => Input.GetKey(x)) : (Func<KeyCode, bool>)((x) => Input.GetKeyDown(x)); 
+                            if(keyPressedFunc(KeyCode.W))
                             {
                                 ServerAction action = new ServerAction();
                                 if(PhysicsController.FlightMode)
@@ -165,16 +180,20 @@ public int objectVariation;
                                     action.moveMagnitude = FlyMagnitude;
                                     PhysicsController.ProcessControlCommand(action);
                                 }
-
                                 else
                                 {
                                     action.action = "MoveAhead";
-                                    action.moveMagnitude = WalkMagnitude;		
-                                    PhysicsController.ProcessControlCommand(action);
+                                    action.timeSeconds = this.continuousMoveTimeSeconds;
+                                    action.continuous = this.continuousMove;
+                                    action.moveMagnitude = WalkMagnitude;	
+                                    Debug.Log("Move ahead process");	
+                                    if (PhysicsController.actionComplete) {
+                                        PhysicsController.ProcessControlCommand(action);
+                                    }
                                 }
                             }
 
-                            if(Input.GetKeyDown(KeyCode.S))
+                            if(keyPressedFunc(KeyCode.S))
                             {
                                 ServerAction action = new ServerAction();
                                 if(PhysicsController.FlightMode)
@@ -187,12 +206,16 @@ public int objectVariation;
                                 else
                                 {
                                     action.action = "MoveBack";
+                                    action.timeSeconds = this.continuousMoveTimeSeconds;
+                                    action.continuous = this.continuousMove;
                                     action.moveMagnitude = WalkMagnitude;		
-                                    PhysicsController.ProcessControlCommand(action);
+                                    if (PhysicsController.actionComplete) {
+                                        PhysicsController.ProcessControlCommand(action);
+                                    }
                                 }
                             }
 
-                            if(Input.GetKeyDown(KeyCode.A))
+                            if(keyPressedFunc(KeyCode.A))
                             {
                                 ServerAction action = new ServerAction();
                                 if(PhysicsController.FlightMode)
@@ -205,12 +228,16 @@ public int objectVariation;
                                 else
                                 {
                                     action.action = "MoveLeft";
+                                    action.timeSeconds = this.continuousMoveTimeSeconds;
+                                    action.continuous = this.continuousMove;
                                     action.moveMagnitude = WalkMagnitude;		
-                                    PhysicsController.ProcessControlCommand(action);
+                                    if (PhysicsController.actionComplete) {
+                                        PhysicsController.ProcessControlCommand(action);
+                                    }
                                 }
                             }
 
-                            if(Input.GetKeyDown(KeyCode.D))
+                            if(keyPressedFunc(KeyCode.D))
                             {
                                 ServerAction action = new ServerAction();
                                 if(PhysicsController.FlightMode)
@@ -223,8 +250,12 @@ public int objectVariation;
                                 else
                                 {
                                     action.action = "MoveRight";
+                                    action.timeSeconds = this.continuousMoveTimeSeconds;
+                                    action.continuous = this.continuousMove;
                                     action.moveMagnitude = WalkMagnitude;		
-                                    PhysicsController.ProcessControlCommand(action);
+                                    if (PhysicsController.actionComplete) {
+                                        PhysicsController.ProcessControlCommand(action);
+                                    }
                                 }
                             }
 
@@ -268,9 +299,12 @@ public int objectVariation;
                             {
                                 ServerAction action = new ServerAction();
                                 // action.action = "RotateLeft";
+                                Debug.Log("RotateLeftSmooth process");	
                                 action.action = "RotateLeftSmooth";
                                 action.timeStep = 0.4f;
-                                PhysicsController.ProcessControlCommand(action); 
+                                if (PhysicsController.actionComplete) {
+                                    PhysicsController.ProcessControlCommand(action); 
+                                }
                             }
 
                             if(Input.GetKeyDown(KeyCode.RightArrow) )//|| Input.GetKeyDown(KeyCode.L))
@@ -279,7 +313,11 @@ public int objectVariation;
                                 // action.action = "RotateRight";
                                 action.action = "RotateRightSmooth";
                                 action.timeStep = 0.4f;
-                                PhysicsController.ProcessControlCommand(action); 
+                                //PhysicsController.ProcessControlCommand(action); 
+
+                                 if (PhysicsController.actionComplete) {
+                                    PhysicsController.ProcessControlCommand(action); 
+                                }
                             }
                         }
 
@@ -335,7 +373,7 @@ public int objectVariation;
                                 if (withinReach) {
                                     ServerAction action = new ServerAction();
                                     action.objectId = onlyPickableObjectId;
-                                    action.action = "PickupObject";
+                                    action.action = this.clickAction;
                                     PhysicsController.ProcessControlCommand(action);
                                 }
                             }

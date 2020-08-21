@@ -63,6 +63,17 @@
     background-color: #74b255;
 }
 
+.finish-btn-fail {
+    width: 100%;
+    flex: 1;
+    height: 100%;
+    background-color: #e3d16f;
+}
+
+.finish-btn-fail:disabled {
+    background-color: #e3d697;
+}
+
 .giveup-btn {
     width: 100%;
     flex: 1;
@@ -83,6 +94,14 @@
 
 
 }
+
+.finish-fail {
+    margin-top: 3px;
+    height: 30px;
+
+
+}
+
 
 .reset-btn:disabled {
     width: 100%;

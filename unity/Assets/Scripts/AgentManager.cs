@@ -1012,6 +1012,8 @@ public class ServerAction
 	public string StateChange;//a string that specifies which state change to randomly toggle
     public float timeStep = 0.01f;
 
+    public float timeSeconds = 0.0f;
+
     public ObjectPose[] objectPoses;
     public ObjectToggle[] objectToggles;
 

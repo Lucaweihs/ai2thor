@@ -4,10 +4,10 @@
     <meta charset="utf-8">
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
     <title>Unity WebGL Player | AI2-Thor</title>
-    <!--     <script>-->
-    <!--      window.game_url =  "Build/thor-local-WebGL.json";-->
-    <!--      // var gameInstance = UnityLoader.instantiate("gameContainer", "Build/thor-local-WebGL.json", {onProgress: UnityProgress});-->
-    <!--    </script>-->
+    <script>
+      window.game_url =  "Build/thor-local-WebGL.json";
+      // var gameInstance = UnityLoader.instantiate("gameContainer", "Build/thor-local-WebGL.json", {onProgress: UnityProgress});
+    </script>
     <link rel="shortcut icon" href="TemplateData/favicon.ico">
     <link rel="stylesheet" href="TemplateData/style.css">
     <script src="TemplateData/UnityProgress.js"></script>
@@ -23,6 +23,12 @@
         <div class="finish">
             <button class="finish-btn" id="finish-hit" disabled="true" >
                 Finish
+            </button>
+        </div>
+
+        <div class="finish-fail" id="finish-fail-div">
+            <button class="finish-btn-fail" id="finish-hit-fail" disabled="true" >
+                Can't Reach Object
             </button>
         </div>
         <div>
@@ -96,9 +102,9 @@
             <div id="score-board" class="score-container"></div>
             <div class="score-container" id="timer"></div>
         </div>
-        <div class="next-container">
-            <input id="next-game" class="next-btn" type="button" value="Next Game"/>
-        </div>
+        <!--<div class="next-container">-->
+            <!--<input id="next-game" class="next-btn" type="button" value="Next Game"/>-->
+        <!--</div>-->
 
 
     </div>

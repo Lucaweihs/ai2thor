@@ -58,7 +58,7 @@ namespace UnityStandardAssets.Characters.FirstPerson
             #endif
             #if UNITY_WEBGL
                 Debug.Log("Webgl");
-                setControlMode(ControlMode.FPS);
+                setControlMode(ControlMode.DISCRETE_POINT_CLICK);
                 PhysicsController.GetComponent<JavaScriptInterface>().enabled = true;
             #endif
             #if TURK_TASK
@@ -595,6 +595,19 @@ namespace UnityStandardAssets.Characters.FirstPerson
                         PhysicsController.ProcessControlCommand(action);
                         break;
                     }
+                case "spawntest" : 
+                {
+                     ServerAction action = new ServerAction() {
+                          action = "CreateObjectAtLocation",
+                        position = new Vector3(-2.82513666f, 0.8843761f, 1.98024642f),
+                        rotation = new Vector3( 359.5047,  288.56897,358.992981),
+                        forceAction = true,
+                        objectType = "Bread",
+                        objectVariation = "1",
+                        randomizeObjectAppearance= false };
+                    PhysicsController.ProcessControlCommand(action);
+                    break;
+                }
                 case "grpfo":
                     {
                         ServerAction action = new ServerAction();

@@ -1879,40 +1879,155 @@ namespace UnityStandardAssets.Characters.FirstPerson {
                 return false;
             }
         }
+
+        public IEnumerator MoveSmooth(
+            Vector3 direction,
+            float timeSeconds,
+            string uniqueId="",
+            float maxDistanceToObject=-1.0f
+        ) {
+
+            Vector3 targetPosition = transform.position + direction;
+            var normDir = Vector3.Normalize(direction);
+            float angle = Vector3.Angle(transform.forward, normDir);
+
+            float right = Vector3.Dot(transform.right, direction);
+            if (right < 0) {
+                angle = 360f - angle;
+            }
+            int angleInt = Mathf.RoundToInt(angle) % 360;
+
+            if (checkIfSceneBoundsContainTargetPosition(targetPosition) &&
+                CheckIfItemBlocksAgentMovement(direction.magnitude, angleInt) &&
+                CheckIfAgentCanMove(direction.magnitude, angleInt)) {
+                DefaultAgentHand();
+                Vector3 oldPosition = transform.position;
+
+                if (uniqueId != "" && maxDistanceToObject > 0.0f) {
+                    if (!physicsSceneManager.UniqueIdToSimObjPhysics.ContainsKey(uniqueId)) {
+                        errorMessage = "No object with ID " + uniqueId;
+                        transform.position = oldPosition; 
+                        // yield return StartCoroutine(actionFinishedAsync(false));
+                        actionFinished(false);
+                        yield break;
+                    }
+                    SimObjPhysics sop = physicsSceneManager.UniqueIdToSimObjPhysics[uniqueId];
+                    if (distanceToObject(sop) > maxDistanceToObject) {
+                        errorMessage = "Agent movement would bring it beyond the max distance of " + uniqueId;
+                        transform.position = oldPosition;
+                        //yield return StartCoroutine(actionFinishedAsync(false));
+                        actionFinished(false);
+                        yield break;
+                    }
+                }
+               
+            } else {
+                 //yield return StartCoroutine(actionFinishedAsync(false));
+                 actionFinished(false);
+                 yield break;
+            }
+
+            var speed = direction.magnitude / timeSeconds;
+
+			// m.y = Physics.gravity.y * this.m_GravityMultiplier;
+            var timer = 0.0f;
+            while (timer < timeSeconds) {
+                timer += Time.deltaTime;
+
+                transform.position += normDir * speed * Time.deltaTime;
+                yield return new WaitForEndOfFrame();
+            }
+
+            transform.position = targetPosition;
+            this.snapToGrid();
+			
+			//yield return StartCoroutine(actionFinishedAsync(true));
+            actionFinished(true);
+        }
+
+
         public override void MoveLeft(ServerAction action) {
             action.moveMagnitude = action.moveMagnitude > 0 ? action.moveMagnitude : gridSize;
-            actionFinished(moveInDirection(
-                -1 * transform.right * action.moveMagnitude,
-                action.objectId,
-                action.maxAgentsDistance
-            ));
+            var dir = -1 * transform.right * action.moveMagnitude;
+            if (!action.continuous) {
+                actionFinished(moveInDirection(
+                    dir,
+                    action.objectId,
+                    action.maxAgentsDistance
+                ));
+            }
+            else {
+                StartCoroutine(MoveSmooth(
+                    dir,
+                    action.timeSeconds,
+                    action.objectId,
+                    action.maxAgentsDistance
+                    )
+                );
+            }
         }
 
         public override void MoveRight(ServerAction action) {
             action.moveMagnitude = action.moveMagnitude > 0 ? action.moveMagnitude : gridSize;
-            actionFinished(moveInDirection(
-                transform.right * action.moveMagnitude,
-                action.objectId,
-                action.maxAgentsDistance
-            ));
+            var dir = transform.right * action.moveMagnitude;
+            if (!action.continuous) {
+                actionFinished(moveInDirection(
+                    dir,
+                    action.objectId,
+                    action.maxAgentsDistance
+                ));
+            }
+            else {
+                StartCoroutine(MoveSmooth(
+                    dir,
+                    action.timeSeconds,
+                    action.objectId,
+                    action.maxAgentsDistance
+                    )
+                );
+            }
         }
 
         public override void MoveAhead(ServerAction action) {
             action.moveMagnitude = action.moveMagnitude > 0 ? action.moveMagnitude : gridSize;
-            actionFinished(moveInDirection(
-                transform.forward * action.moveMagnitude,
-                action.objectId,
-                action.maxAgentsDistance
-            ));
+            var dir = transform.forward * action.moveMagnitude;
+            if (!action.continuous) {
+                actionFinished(moveInDirection(
+                    dir,
+                    action.objectId,
+                    action.maxAgentsDistance
+                ));
+            }
+            else {
+                StartCoroutine(MoveSmooth(
+                    dir,
+                    action.timeSeconds,
+                    action.objectId,
+                    action.maxAgentsDistance
+                    )
+                );
+            }
         }
 
         public override void MoveBack(ServerAction action) {
             action.moveMagnitude = action.moveMagnitude > 0 ? action.moveMagnitude : gridSize;
-            actionFinished(moveInDirection(
-                -1 * transform.forward * action.moveMagnitude,
-                action.objectId,
-                action.maxAgentsDistance
-            ));
+            var dir = -1 * transform.forward * action.moveMagnitude;
+            if (!action.continuous) {
+                actionFinished(moveInDirection(
+                    dir,
+                    action.objectId,
+                    action.maxAgentsDistance
+                ));
+            }
+            else {
+                StartCoroutine(MoveSmooth(
+                    dir,
+                    action.timeSeconds,
+                    action.objectId,
+                    action.maxAgentsDistance
+                    )
+                );
+            }
         }
 
         //Flying Drone Agent Controls
@@ -3838,6 +3953,34 @@ namespace UnityStandardAssets.Characters.FirstPerson {
 #endif
         }
 
+
+        public void SelectObject(ServerAction action) //use serveraction objectid
+        {
+            if (!physicsSceneManager.UniqueIdToSimObjPhysics.ContainsKey(action.objectId)) {
+                errorMessage = "Object ID appears to be invalid.";
+                actionFinished(false);
+                return;
+            }
+            
+            SimObjPhysics target = physicsSceneManager.UniqueIdToSimObjPhysics[action.objectId]; 
+
+            if (!action.forceAction && !objectIsCurrentlyVisible(target, maxVisibleDistance)) {
+                errorMessage = action.objectId + " is not visible.";
+                actionFinished(false);
+                return;
+            }
+
+            if (!action.forceAction && target.isInteractable == false) {
+                errorMessage = action.objectId + " is not interactable and (perhaps it is occluded by something).";
+                actionFinished(false);
+                return;
+            }
+
+            actionFinished(true, target.UniqueID);
+            return;
+        }
+
+
         public void PickupObject(ServerAction action) //use serveraction objectid
         {
             if (!physicsSceneManager.UniqueIdToSimObjPhysics.ContainsKey(action.objectId)) {
@@ -4615,7 +4758,7 @@ namespace UnityStandardAssets.Characters.FirstPerson {
             var time = Time.time;
             var newTime = time;
             while (newTime - time < seconds) {
-                yield return null;
+                yield return new WaitForEndOfFrame();
                 newTime = Time.time;
                 var diffSeconds = newTime - time;
                 var alpha = Mathf.Min(diffSeconds / seconds, 1.0f);
@@ -4624,6 +4767,7 @@ namespace UnityStandardAssets.Characters.FirstPerson {
             }
             Debug.Log("Rotate action finished! " + (newTime - time) );
             //  this.transform.rotation = targetRotation;
+            //yield return StartCoroutine(actionFinishedAsync(true));
             actionFinished(true);
         }
 

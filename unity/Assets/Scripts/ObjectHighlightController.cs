@@ -60,6 +60,8 @@ namespace UnityStandardAssets.Characters.FirstPerson {
 
         private bool disableHighlightShaderForObject = false;
 
+        private string pickupAction = "";
+
 
         public ObjectHighlightController(
             PhysicsRemoteFPSAgentController physicsController,
@@ -68,7 +70,8 @@ namespace UnityStandardAssets.Characters.FirstPerson {
             float maxThrowForce = 1000.0f,
             float maxChargeThrowSeconds = 1.4f,
             bool highlightWhileHolding = false,
-            HighlightConfig highlightConfig = null
+            HighlightConfig highlightConfig = null,
+            string pickupAction = "PickupObject"
         )   
         {
             this.PhysicsController = physicsController;
@@ -76,6 +79,7 @@ namespace UnityStandardAssets.Characters.FirstPerson {
             this.MaxThrowForce = maxThrowForce;
             this.MaxChargeThrowSeconds = maxChargeThrowSeconds;
             this.highlightWhileHolding = highlightWhileHolding;
+            this.pickupAction = pickupAction;
             if (highlightConfig != null) {
                 this.HighlightParams = highlightConfig;
             }
@@ -100,6 +104,10 @@ namespace UnityStandardAssets.Characters.FirstPerson {
             this.disableHighlightShaderForObject = disableHighlightShaderForObject;
         }
 
+        public void SetPickupAction(string action) {
+            this.pickupAction = action;
+        }
+
         public void MouseControls()
 		{
             // Interact action for mouse left-click when nothing is picked up
@@ -114,7 +122,7 @@ namespace UnityStandardAssets.Characters.FirstPerson {
                         if (closestObj.PrimaryProperty == SimObjPrimaryProperty.CanPickup && (onlyPickableObjectId == null || onlyPickableObjectId == closestObj.uniqueID))
                         {
                             pickupState = true;
-                            actionName = "PickupObject";
+                            actionName = this.pickupAction;
                         }
                         else if (closestObj.GetComponent<CanOpen_Object>())
                         {

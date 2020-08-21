@@ -3,6 +3,7 @@ $(
     let gameInstance = null;
     let getParams = parseGet();
     window.game_build = 'build' in getParams ? getParams['build'] : window.game_build;
+    console.log("Buidl " + window.game_build);
     window.game_url = 'build' in getParams ? `${window.game_build}/Build/thor-local-WebGL.json` : window.game_url;
     let scene = getParams['scene'];
     console.log("GAME URL: ", window.game_url);
@@ -30,6 +31,8 @@ $(
 
     let pickupFailTimeout = false;
     let hasObject = false;
+
+    let cannotReach = false;
 
     let randomGame = 'random' in getParams && getParams['random'].toLowerCase() === 'true';
 
@@ -149,6 +152,17 @@ $(
         }));
       });
 
+      $("#finish-hit-fail").click((e) => {
+        // The callback for ExhaustiveSearchForItem action will call submitHit
+        // with visibility information of the hiding spot
+        cannotReach = true;
+        gameInstance.SendMessage ('FPSController', 'Step', JSON.stringify({
+          "action": "ExhaustiveSearchForItem",
+          "objectId": objectId,
+          "positions": reachablePositions
+        }));
+      });
+
       $("#debug-json").click((e) => {
         debugPrintJson(lastMetadadta)
       });
@@ -180,6 +194,7 @@ $(
       }
       else if (seekerInitPhase) {
         seekerInitPhase = false;
+        console.log("creating object " + gameConfig.object_type);
 
         gameInstance.SendMessage('FPSController', 'Step', JSON.stringify({
           action: "CreateObjectAtLocation",
@@ -237,6 +252,7 @@ $(
     ///////////////////////
     ///// Seeker's Handlers
     function CreateObjectAtLocation(metadata) {
+      console.log("---------------- create object seeker handler");
       let agentMetadata = metadata.agents[0];
       gameInstance.SendMessage('FPSController', 'SetOnlyObjectIdSeeker', agentMetadata.actionReturn);
       gameInstance.SendMessage('FPSController', 'DisableObjectCollisionWithAgent', agentMetadata.actionReturn);
@@ -320,6 +336,8 @@ $(
       }
       else {
 
+        gameInstance.SendMessage('FPSController', 'SetClickAction', 'SelectObject');
+
         openInitObjects = gameConfig.open_objects.map(x => x);
         gameInstance.SendMessage('FPSController', 'Step', JSON.stringify({
           action: "TeleportFull",
@@ -382,6 +400,7 @@ $(
         MoveRight: Move,
         OpenObject: OpenObject,
         PickupObject: FoundObject,
+        SelectObject: FoundObject,
         CreateObjectAtLocation: CreateObjectAtLocation,
         TeleportFull: TeleportFull
       }
@@ -427,87 +446,106 @@ $(
 
     function seekerSetup(dirStr, gameId, loadUnityBuild=false) {
 
-        seekerInitPhase = true;
-        let configCallback = function(config) {
+      seekerInitPhase = true;
+      let configCallback = function(config) {
 
-          outputData = {
-            object_type: getParams['object'],
-            object_variation: getParams['variation'],
-            open_objects: []
-          };
-
-          // if (loadUnityBuild)
-          console.log("------ Config", config);
-          gameConfig = config;
-          $("#instructions-seeker").show();
-          $("#message-text").show();
-          // gameConfig['agentPosition']
-          let objectHtml = `<strong class="important-text">${gameConfig.object_type}</strong>`;
-          let lowercaseObjectName = gameConfig.object_type.toLowerCase();
-          $("#instruction-text").html(`You have to find a ${objectHtml} <div class="seeker-image-container ${lowercaseObjectName}"><img class="seeker-image" src="TemplateData/images/${lowercaseObjectName}.png"/></div>`);
-          $("#instruction-2").html(`Move around in the room, open drawers and cabinets to look for a ${objectHtml}.`);
-          $("#instruction-3").html('Click on it once you have found it.');
-          $("#instruction-4").html(`If you cannot find the ${objectHtml} after some time, you can click the <strong class="red-text">Give Up</strong> button above.`);
-          getParams['object'] = gameConfig['object_type'];
-          getParams['variation'] = gameConfig['object_variation'];
-
-          outputData.object_type = gameConfig['object_type'];
-          outputData.object_variation = gameConfig['object_variation'];
-
-          outputData.hidden_object = {
-            position: gameConfig.object_position,
-            rotation: gameConfig.object_rotation
-          };
-          outputData.hider = getParams['config'];
-          outputData.dataset = getParams['dataset'];
-
-          if ('human' in gameConfig) {
-            outputData.human = true;
-          }
-
-          $("#finish-hit").click((e) => {
-
-            outputData['success'] = false;
-            submitHit(lastMetadadta);
-
-            if (randomGame) {
-              getNextGame();
-            }
-
-          }).text("Give Up").addClass("giveup-btn");
-
-
-          $("#reset-hit").hide();
-
-          setTimeout(() => {
-            $("#finish-hit").attr("disabled", false);
-          }, 'giveUpEnableSeconds' in getParams ? parseInt(getParams['giveUpEnableSeconds']) * 1000 : 30000);
-
-          // Starting point for unity
-          initGame(window.game_url);
+        outputData = {
+          object_type: getParams['object'],
+          object_variation: getParams['variation'],
+          open_objects: []
         };
 
-        // Uses a hider game data to create a game
-        $.getJSON(
-          `https://thor-turk.s3-us-west-2.amazonaws.com/hide-n-seek/data/hider/${dirStr}${gameId}`,
-          function(config) {
-            if (loadUnityBuild) {
-              $.getScript(`${config.scene}/Build/UnityLoader.js`)
-                .done(function (script, textStatus) {
-                  console.log("Status: ", textStatus);
-                  window.game_url = `${config.scene}/Build/thor-local-WebGL.json`;
-                  configCallback(config);
+        // if (loadUnityBuild)
+        console.log("------ Config", config);
+        gameConfig = config;
+        $("#instructions-seeker").show();
+        $("#message-text").show();
+        // gameConfig['agentPosition']
+        let objectHtml = `<strong class="important-text">${gameConfig.object_type}</strong>`;
+        let lowercaseObjectName = gameConfig.object_type.toLowerCase();
+        $("#instruction-text").html(`You have to find a ${objectHtml} <div class="seeker-image-container ${lowercaseObjectName}"><img class="seeker-image" src="TemplateData/images/${lowercaseObjectName}.png"/></div>`);
+        $("#instruction-2").html(`Move around in the room, open drawers and cabinets to look for a ${objectHtml}.`);
+        $("#instruction-3").html('Click on it once you have found it.');
+        $("#instruction-4").html(`If you cannot find the ${objectHtml} after some time, you can click the <strong class="red-text">Give Up</strong> button above.`);
+        getParams['object'] = gameConfig['object_type'];
+        getParams['variation'] = gameConfig['object_variation'];
 
-                })
-                .fail(function (jqxhr, settings, exception) {
-                  console.error("Triggered ajaxError handler.", exception);
-                });
+        outputData.object_type = gameConfig['object_type'];
+        outputData.object_variation = gameConfig['object_variation'];
 
-            }
-            else {
-              configCallback(config);
-            }
-          });
+        outputData.hidden_object = {
+          position: gameConfig.object_position,
+          rotation: gameConfig.object_rotation
+        };
+        outputData.hider = getParams['config'];
+        outputData.dataset = getParams['dataset'];
+
+        if ('human' in gameConfig) {
+          outputData.human = true;
+        }
+
+        $("#finish-hit").click((e) => {
+
+          outputData['success'] = false;
+          submitHit(lastMetadadta);
+
+          if (randomGame) {
+            getNextGame();
+          }
+
+        }).text("Give Up").addClass("giveup-btn");
+
+        $("#finish-hit-fail").click((e) => {
+
+          outputData['success'] = false;
+          outputData['cannotReach'] = true;
+          submitHit(lastMetadadta);
+
+          if (randomGame) {
+            getNextGame();
+          }
+
+        });//.text("Cannot Reach").addClass("giveup-btn");
+
+
+        $("#reset-hit").hide();
+
+        setTimeout(() => {
+          $("#finish-hit").attr("disabled", false);
+        }, 'giveUpEnableSeconds' in getParams ? parseInt(getParams['giveUpEnableSeconds']) * 1000 : 30000);
+
+        let giveUpReachSeconds = 'cantReachEnableSeconds' in getParams ? getParams['cantReachEnableSeconds'] : getParams['giveUpEnableSeconds'];
+        $("#finish-fail-div").hide();
+        setTimeout(() => {
+          $("#finish-fail-div").show();
+          $("#finish-hit-fail").attr("disabled", false);
+        }, 'giveUpEnableSeconds' in getParams ? parseInt(giveUpReachSeconds) * 1000 : 30000);
+
+        // Starting point for unity
+        initGame(window.game_url);
+      };
+
+      // Uses a hider game data to create a game
+      $.getJSON(
+        `https://thor-turk.s3-us-west-2.amazonaws.com/hide-n-seek/data/hider/${dirStr}${gameId}`,
+        function(config) {
+          if (loadUnityBuild) {
+            $.getScript(`${config.scene}/Build/UnityLoader.js`)
+              .done(function (script, textStatus) {
+                console.log("Status: ", textStatus);
+                window.game_url = `${config.scene}/Build/thor-local-WebGL.json`;
+                configCallback(config);
+
+              })
+              .fail(function (jqxhr, settings, exception) {
+                console.error("Triggered ajaxError handler.", exception);
+              });
+
+          }
+          else {
+            configCallback(config);
+          }
+        });
     }
 
     function shuffle(array) {
@@ -529,27 +567,27 @@ $(
 
 
       // Instruction Rendering
-        let objectHtml = `<strong class="important-text">${getParams['object']}</strong>`;
-        $("#instruction-text").html(`You have to hide a ${objectHtml}`);
-        $("#instruction-2").html(`Move around in the room, open drawers and cabinets to look for a good hiding spot.`);
-        $("#instruction-3").html('When you are ready, move the object (see Shift controls) to place it more precisely, click on it to drop it.');
-        $("#instruction-4").html(`If you're happy with your hiding spot click the <strong class="green-text">Finish</strong> button above. Or <strong class="red-text">Reset</strong> to start over.`);
-        $("#instruction-5").html("If a door/drawer opens and closes, it means you're in the way! Move back and try again.");
-        $("#instruction-6").html("If you're clicking on the object and it's not being picked up, try moving closer to the object! (within 1.5 meters)");
-        $("#instructions-hider").show();
+      let objectHtml = `<strong class="important-text">${getParams['object']}</strong>`;
+      $("#instruction-text").html(`You have to hide a ${objectHtml}`);
+      $("#instruction-2").html(`Move around in the room, open drawers and cabinets to look for a good hiding spot.`);
+      $("#instruction-3").html('When you are ready, move the object (see Shift controls) to place it more precisely, click on it to drop it.');
+      $("#instruction-4").html(`If you're happy with your hiding spot click the <strong class="green-text">Finish</strong> button above. Or <strong class="red-text">Reset</strong> to start over.`);
+      $("#instruction-5").html("If a door/drawer opens and closes, it means you're in the way! Move back and try again.");
+      $("#instruction-6").html("If you're clicking on the object and it's not being picked up, try moving closer to the object! (within 1.5 meters)");
+      $("#instructions-hider").show();
 
-        $(document).keypress(function(event) {
-          if (event.keyCode === 32) {
-            if(event.shiftKey && !hasObject){
-              pickupFailTimeout = setTimeout(() => {
-                $("#last-action-text").html(`Action Failed: <strong class="red-text">Pick Up Failed</strong>`).show();
-              }, 800)
-            } else {
+      $(document).keypress(function(event) {
+        if (event.keyCode === 32) {
+          if(event.shiftKey && !hasObject){
+            pickupFailTimeout = setTimeout(() => {
+              $("#last-action-text").html(`Action Failed: <strong class="red-text">Pick Up Failed</strong>`).show();
+            }, 800)
+          } else {
 
-            }
           }
-        });
-        initGame(window.game_url);
+        }
+      });
+      initGame(window.game_url);
     }
 
 
@@ -660,17 +698,17 @@ $(
           // }
           // else {
 
-            $('#role-str').html(('role' in getParams ? getParams['role'] : 'hider').toUpperCase());
-            $("#mturk_form").attr("action", isTurkSanbox ? turkSandboxUrl : turkUrl);
+          $('#role-str').html(('role' in getParams ? getParams['role'] : 'hider').toUpperCase());
+          $("#mturk_form").attr("action", isTurkSanbox ? turkSandboxUrl : turkUrl);
 
-            if (hider) {
-              hiderSetup();
-            }
-            else {
-              let dirStr = datasetDir !== "" ? `${datasetDir}/` : "";
+          if (hider) {
+            hiderSetup();
+          }
+          else {
+            let dirStr = datasetDir !== "" ? `${datasetDir}/` : "";
 
-              seekerSetup(dirStr, getParams['config']);
-            }
+            seekerSetup(dirStr, getParams['config']);
+          }
           // }
 
 
