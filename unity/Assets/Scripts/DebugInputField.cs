@@ -600,10 +600,10 @@ namespace UnityStandardAssets.Characters.FirstPerson
                      ServerAction action = new ServerAction() {
                           action = "CreateObjectAtLocation",
                         position = new Vector3(-2.82513666f, 0.8843761f, 1.98024642f),
-                        rotation = new Vector3( 359.5047,  288.56897,358.992981),
+                        rotation = new Vector3( 359.5047f,  288.56897f,358.992981f),
                         forceAction = true,
                         objectType = "Bread",
-                        objectVariation = "1",
+                        objectVariation = 1,
                         randomizeObjectAppearance= false };
                     PhysicsController.ProcessControlCommand(action);
                     break;
