@@ -25,8 +25,14 @@ public int objectVariation;
         public string onlyPickableObjectId = null;
         public bool disableCollistionWithPickupObject = false;
         private bool continuousMove = true;
-        private float continuousMoveTimeSeconds = 0.2f;
+        private float continuousMoveTimeSeconds = 0.1f;
         private string clickAction = "PickupObject";
+        private int actionThrottleCount = 3; 
+        private Dictionary<string, int> actionThrottleDict = new Dictionary<string, int>();
+        private string[] throttledActions = new string[] {"MoveAhead", "MoveBack", "MoveLeft", "MoveRight"};
+        private string lastAction = "";
+        private bool lastActionSuccess = true;
+        private bool throttleTriggered = false;
         void Start() 
         {
             var Debug_Canvas = GameObject.Find("DebugCanvasPhysics");
@@ -38,6 +44,15 @@ public int objectVariation;
 
             highlightController = new ObjectHighlightController(PhysicsController, PhysicsController.maxVisibleDistance, false, 0, 0, true, null, this.clickAction);
             highlightController.SetDisplayTargetText(false);
+           
+            var crosshair = GameObject.Find("DebugCanvasPhysics/Crosshair");
+            if (crosshair) {
+                crosshair.SetActive(false);
+            }
+
+             
+            resetThrottleCounts();
+            // actionThrottleDict
 
             // SpawnObjectToHide("{\"objectType\": \"Plunger\", \"objectVariation\": 1}");
         }
@@ -55,6 +70,7 @@ public int objectVariation;
             if (throwForceBar) {
                 throwForceBar.SetActive(false);
             }
+            
             // InputFieldObj = GameObject.Find("DebugCanvasPhysics/InputField");
             // TODO: move debug input field script from, Input Field and disable here
         }
@@ -87,8 +103,11 @@ public int objectVariation;
             this.highlightController.SetOnlyPickableId(objectId);
         }
 
-        public void SetContinuousMove(bool continuous, float continuousMoveTimeSeconds = 0.5f) {
-            this.continuousMove = continuous;
+        public void SetContinuousMove(int continuous) {
+            this.continuousMove = continuous != 0;
+        }
+
+        public void SetContinuousMoveSpeed(float continuousMoveTimeSeconds = 0.5f) {
             this.continuousMoveTimeSeconds = continuousMoveTimeSeconds;
         }
 
@@ -107,12 +126,20 @@ public int objectVariation;
             this.highlightController.SetPickupAction(action);
         }
 
+        public void SetActionThrottleCount(int throttleCount) {
+            this.actionThrottleCount = throttleCount;
+        } 
+
         public void SpawnAgent(int randomSeed) {
             ServerAction action = new ServerAction(){
                 action = "RandomlyMoveAgent",
                 randomSeed = randomSeed
             };
             PhysicsController.ProcessControlCommand(action);
+        }
+
+        public void QuitGame() {
+            Application.Quit();
         }
 
         public void DisableObjectCollisionWithAgent(string objectId) {
@@ -146,12 +173,6 @@ public int objectVariation;
                                 }
         }
 
-        public void Step(string serverAction)
-		{
-			ServerAction controlCommand = new ServerAction();
-			JsonUtility.FromJsonOverwrite(serverAction, controlCommand);
-			PhysicsController.ProcessControlCommand(controlCommand);
-		}
 
         // public void TeleportAgent(string actionStr) {
         //     var command = new ServerAction();
@@ -159,8 +180,48 @@ public int objectVariation;
         //     PhysicsController.ProcessControlCommand(command);
         // }
 
+        private bool throttleCheck(string previousActionName, bool previousActionSuccess, string attemptAction) {
+            if (actionThrottleCount >= 0) {
+                if (!previousActionSuccess && attemptAction == previousActionName ) {
+                    throttleTriggered = true;
+                    if (actionThrottleDict[attemptAction] == 0) {
+                        
+                         //Debug.Log("--Throttled " + attemptAction + " count decrease " + actionThrottleDict[attemptAction]);
+                        return false;
+                    }
+                    else {
+                        //Debug.Log("Fail " + attemptAction + " count decrease " + actionThrottleDict[attemptAction]);
+                        actionThrottleDict[attemptAction] -= 1;
+                    }
+                }
+                else if (!previousActionSuccess && attemptAction != previousActionName ) {
+                    //Debug.Log("--Reset " + attemptAction + " count " + actionThrottleDict[attemptAction]);
+                    resetThrottleCounts();
+                }
+            }
+            return true;
+        }
+
+        private bool processThrottledCommand(ServerAction command) {
+            var doAction = throttleCheck(lastAction, lastActionSuccess, command.action);
+            if (doAction) {
+                PhysicsController.ProcessControlCommand(command);
+            }
+            return doAction;
+        }
+
+        private void processCommand(ServerAction command) {
+            if (throttleTriggered) {
+                resetThrottleCounts();
+            }
+            PhysicsController.ProcessControlCommand(command);
+        }
+
         void Update()
         {
+                lastAction = PhysicsController.GetLastAction(out lastActionSuccess);
+                // if (!prevLastSuccess && lastActionSuccess && actionThrottleDict.ContainsKey(prevLastAction) &&)
+
                 highlightController.UpdateHighlightedObject(Input.mousePosition);
                 highlightController.MouseControls();
 
@@ -178,17 +239,16 @@ public int objectVariation;
                                 {
                                     action.action = "FlyAhead";
                                     action.moveMagnitude = FlyMagnitude;
-                                    PhysicsController.ProcessControlCommand(action);
+                                    processCommand(action);
                                 }
                                 else
                                 {
                                     action.action = "MoveAhead";
                                     action.timeSeconds = this.continuousMoveTimeSeconds;
                                     action.continuous = this.continuousMove;
-                                    action.moveMagnitude = WalkMagnitude;	
-                                    Debug.Log("Move ahead process");	
+                                    action.moveMagnitude = WalkMagnitude;
                                     if (PhysicsController.actionComplete) {
-                                        PhysicsController.ProcessControlCommand(action);
+                                        processThrottledCommand(action);
                                     }
                                 }
                             }
@@ -200,7 +260,7 @@ public int objectVariation;
                                 {
                                     action.action = "FlyBack";
                                     action.moveMagnitude = FlyMagnitude;
-                                    PhysicsController.ProcessControlCommand(action);
+                                    processCommand(action);
                                 }
 
                                 else
@@ -210,7 +270,7 @@ public int objectVariation;
                                     action.continuous = this.continuousMove;
                                     action.moveMagnitude = WalkMagnitude;		
                                     if (PhysicsController.actionComplete) {
-                                        PhysicsController.ProcessControlCommand(action);
+                                        processThrottledCommand(action);
                                     }
                                 }
                             }
@@ -222,7 +282,7 @@ public int objectVariation;
                                 {
                                     action.action = "FlyLeft";
                                     action.moveMagnitude = FlyMagnitude;
-                                    PhysicsController.ProcessControlCommand(action);
+                                    processCommand(action);
                                 }
 
                                 else
@@ -232,7 +292,7 @@ public int objectVariation;
                                     action.continuous = this.continuousMove;
                                     action.moveMagnitude = WalkMagnitude;		
                                     if (PhysicsController.actionComplete) {
-                                        PhysicsController.ProcessControlCommand(action);
+                                        processThrottledCommand(action);
                                     }
                                 }
                             }
@@ -244,7 +304,7 @@ public int objectVariation;
                                 {
                                     action.action = "FlyRight";
                                     action.moveMagnitude = FlyMagnitude;
-                                    PhysicsController.ProcessControlCommand(action);
+                                    processCommand(action);
                                 }
 
                                 else
@@ -254,7 +314,7 @@ public int objectVariation;
                                     action.continuous = this.continuousMove;
                                     action.moveMagnitude = WalkMagnitude;		
                                     if (PhysicsController.actionComplete) {
-                                        PhysicsController.ProcessControlCommand(action);
+                                        processThrottledCommand(action);
                                     }
                                 }
                             }
@@ -266,7 +326,7 @@ public int objectVariation;
                                     ServerAction action = new ServerAction();
                                     action.action = "FlyUp";
                                     action.moveMagnitude = FlyMagnitude;
-                                    PhysicsController.ProcessControlCommand(action);
+                                    processCommand(action);
                                 }
                             }
 
@@ -277,7 +337,7 @@ public int objectVariation;
                                     ServerAction action = new ServerAction();
                                     action.action = "FlyDown";
                                     action.moveMagnitude = FlyMagnitude;
-                                    PhysicsController.ProcessControlCommand(action);
+                                    processCommand(action);
                                 }
                             }
 
@@ -285,14 +345,14 @@ public int objectVariation;
                             // {
                             //     ServerAction action = new ServerAction();
                             //     action.action = "LookUp";
-                            //     PhysicsController.ProcessControlCommand(action); 
+                            //     processCommand(action); 
                             // }
 
                             // if(Input.GetKeyDown(KeyCode.DownArrow))
                             // {
                             //     ServerAction action = new ServerAction();
                             //     action.action = "LookDown";
-                            //     PhysicsController.ProcessControlCommand(action); 
+                            //     processCommand(action); 
                             // }
 
                             if(Input.GetKeyDown(KeyCode.LeftArrow) )//|| Input.GetKeyDown(KeyCode.J))
@@ -303,7 +363,7 @@ public int objectVariation;
                                 action.action = "RotateLeftSmooth";
                                 action.timeStep = 0.4f;
                                 if (PhysicsController.actionComplete) {
-                                    PhysicsController.ProcessControlCommand(action); 
+                                    processCommand(action); 
                                 }
                             }
 
@@ -313,10 +373,10 @@ public int objectVariation;
                                 // action.action = "RotateRight";
                                 action.action = "RotateRightSmooth";
                                 action.timeStep = 0.4f;
-                                //PhysicsController.ProcessControlCommand(action); 
+                                //processCommand(action); 
 
                                  if (PhysicsController.actionComplete) {
-                                    PhysicsController.ProcessControlCommand(action); 
+                                    processCommand(action); 
                                 }
                             }
                         }
@@ -354,7 +414,7 @@ public int objectVariation;
                                     y = localPos.y,
                                     z = localPos.z
                                 };
-                                this.PhysicsController.ProcessControlCommand(action);
+                                this.processCommand(action);
                             }
 
                             if (Input.GetKeyDown(KeyCode.Space)) {
@@ -364,7 +424,7 @@ public int objectVariation;
                                         action = "DropHandObject",
                                         forceAction = true
                                     };
-                                this.PhysicsController.ProcessControlCommand(action);
+                                this.processCommand(action);
                             }
                         }
                         else if (handMode) {
@@ -374,7 +434,7 @@ public int objectVariation;
                                     ServerAction action = new ServerAction();
                                     action.objectId = onlyPickableObjectId;
                                     action.action = this.clickAction;
-                                    PhysicsController.ProcessControlCommand(action);
+                                    processCommand(action);
                                 }
                             }
                         }
@@ -382,11 +442,11 @@ public int objectVariation;
                             ServerAction action = new ServerAction();
                             if (this.PhysicsController.isStanding()) {
                                 action.action = "Crouch";
-                                PhysicsController.ProcessControlCommand(action);
+                                processCommand(action);
                             }
                             else {
                                  action.action = "Stand";
-                                 PhysicsController.ProcessControlCommand(action);
+                                 processCommand(action);
                             }
                             
 
@@ -422,6 +482,18 @@ public int objectVariation;
                          
                             //   }
                         }
+            }
+        }
+
+        private void resetThrottleCounts(string action = "") {
+            throttleTriggered = false;
+            if (action == "") {
+                foreach (var ac in throttledActions) {
+                    actionThrottleDict[ac] = actionThrottleCount;
+                }
+            }
+            else {
+                actionThrottleDict[action] = actionThrottleCount;
             }
         }
 

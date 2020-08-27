@@ -6,6 +6,7 @@ $(
     console.log("Buidl " + window.game_build);
     window.game_url = 'build' in getParams ? `${window.game_build}/Build/thor-local-WebGL.json` : window.game_url;
     let scene = getParams['scene'];
+    let turingTestEnabled = 'turingTest' in getParams && getParams['turingTest'].toLowerCase() === 'true';
     console.log("GAME URL: ", window.game_url);
     let hider = getParams['role'] !== 'seeker';
     let gameInitialized  = false;
@@ -111,12 +112,115 @@ $(
 
     // Submit to turk
     function submitHit(metadata) {
-      let data = gatherFinalState(metadata);
-      document.forms['mturk_form'].assignmentId.value = getParams['assignmentId'];
-      console.log('Turk submit!!', data);
-      document.forms['mturk_form'].data.value = JSON.stringify(data);
-      // document.forms['mturk_form'].submit();
-      window.parent.postMessage(JSON.stringify(data), '*');
+      let turing = false;
+      // if (confirm("Did you play against a human or a MACHINE?")) {
+      //   txt = "You pressed OK!";
+      // } else {
+      //   txt = "You pressed Cancel!";
+      // }
+
+      let submit = () => {
+        let data = gatherFinalState(metadata);
+        document.forms['mturk_form'].assignmentId.value = getParams['assignmentId'];
+        console.log('Turk submit!!', data);
+        document.forms['mturk_form'].data.value = JSON.stringify(data);
+        // document.forms['mturk_form'].submit();
+        window.parent.postMessage(JSON.stringify(data), '*');
+      };
+      // $.noConflict();
+
+      // $("#dialog-confirm").show();
+      //   $("#dialog-confirm").dialog({
+      //     resizable: false,
+      //     height: "auto",
+      //     width: 400,
+      //     modal: true,
+      //     buttons: {
+      //       "Machine": () => {
+      //         outputData['playedAgainstHumanSurvey'] = false;
+      //         $(this).dialog("close");
+      //         submit();
+      //       },
+      //       "Human": () => {
+      //         outputData['playedAgainstHumanSurvey'] = true;
+      //         $(this).dialog("close");
+      //         submit();
+      //       }
+      //     }
+      //   });
+
+      if (turingTestEnabled) {
+        let parent = $("#test-options");
+        let divs = parent.children();
+        while (divs.length) {
+          parent.append(divs.splice(Math.floor(Math.random() * divs.length), 1)[0]);
+        }
+        $("#turing-human").click(() => {
+          outputData['playedAgainstHumanSurvey'] = true;
+          submit();
+        });
+        $("#turing-computer").click(() => {
+          outputData['playedAgainstHumanSurvey'] = false;
+          submit();
+
+        });
+        $("#myModal").show();
+        gameInstance.SendMessage(
+          'FPSController',
+          'QuitGame');
+
+      }
+      else {
+        submit();
+      }
+
+
+
+
+
+      // let iframe =  $("#myModal");
+      // iframe.parentNode.removeChild(iframe);
+      // $("#close").click(() => {
+      //   $("#myModal").hide();
+      // });
+
+      // gameInstance.Quit(function() {
+      //   console.log("done!");
+      // });
+      // gameInstance = null;
+
+
+      // $("#gameContainer").hide();
+      // $("#myModal"s).click(() => {
+      //   $("#myModal").hide();
+      // });
+//
+//       var modal = document.getElementById("myModal");
+//
+// // Get the button that opens the modal
+//       var btn = document.getElementById("myBtn");
+//
+// // Get the <span> element that closes the modal
+//       var span = document.getElementsByClassName("close")[0];
+//
+// // When the user clicks on the button, open the modal
+//       btn.onclick = function() {
+//         modal.style.display = "block";
+//       }
+//
+// // When the user clicks on <span> (x), close the modal
+//       span.onclick = function() {
+//         modal.style.display = "none";
+//       }
+//
+// // When the user clicks anywhere outside of the modal, close it
+//       window.onclick = function(event) {
+//         if (event.target == modal) {
+//           modal.style.display = "none";
+//         }
+//       }
+
+
     }
 
     ///////////////////////
@@ -323,6 +427,18 @@ $(
             JSON.stringify({action: "DisableAllObjectsOfType", objectId: k})
           )
         );
+
+      gameInstance.SendMessage(
+        'FPSController',
+        'SetContinuousMove',
+        !('discrete' in getParams && getParams['discrete'].toLowerCase() === 'true') ? 1 : 0
+      );
+
+      gameInstance.SendMessage(
+        'FPSController',
+        'SetContinuousMoveSpeed',
+        parseFloat(getParams['moveTimeSeconds'])
+      );
 
       if (hider) {
         let objectName = getParams['object'];

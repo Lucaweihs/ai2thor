@@ -216,6 +216,11 @@ namespace UnityStandardAssets.Characters.FirstPerson
             actionFinished(success, actionReturn);
 		}
 
+        public string GetLastAction(out bool success) {
+            success = lastActionSuccess;
+            return lastAction;
+        }
+
 		abstract public Vector3[] getReachablePositions(float gridMultiplier=1.0f);
 
 		public void Initialize(ServerAction action)

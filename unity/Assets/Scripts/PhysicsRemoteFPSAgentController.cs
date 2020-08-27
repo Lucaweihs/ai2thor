@@ -1931,15 +1931,21 @@ namespace UnityStandardAssets.Characters.FirstPerson {
 
 			// m.y = Physics.gravity.y * this.m_GravityMultiplier;
             var timer = 0.0f;
+            var iniitialPos= transform.position;
             while (timer < timeSeconds) {
-                timer += Time.deltaTime;
+                
+                var alpha = timer/timeSeconds;
+                alpha = Mathf.Clamp(alpha, 0.0f, 1.0f);
 
-                transform.position += normDir * speed * Time.deltaTime;
+                //transform.position += normDir * speed * Time.deltaTime;
+                transform.position =  iniitialPos + alpha * direction;
                 yield return new WaitForEndOfFrame();
+                timer += Time.deltaTime;
             }
 
             transform.position = targetPosition;
             this.snapToGrid();
+             //yield return new WaitForEndOfFrame();
 			
 			//yield return StartCoroutine(actionFinishedAsync(true));
             actionFinished(true);

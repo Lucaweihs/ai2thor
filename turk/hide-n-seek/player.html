@@ -17,7 +17,21 @@
 
 </head>
 <body>
+<div id="myModal" class="modal" hidden>
+
+    <!-- Modal content -->
+    <div class="modal-content">
+        <!--<span class="close">&times;</span>-->
+        <p>Do you think you played against a human or computer player?</p>
+        <div id="test-options" class="test-div">
+            <button id="turing-human" class="test-btn">Human</button>
+            <button id="turing-computer" class="test-btn">Computer</button>
+        </div>
+    </div>
+
+</div>
 <div class="main">
+
     <div class="submit-container">
         <p class="instructions-title submit">&nbsp Submit</p>
         <div class="finish">
@@ -88,6 +102,8 @@
         </div>
 
     </div>
+    <!-- The Modal -->
+
     <div class="webgl-content">
         <div id="gameContainer" style="width: 75vmin; height: 75vmin"></div>
 
