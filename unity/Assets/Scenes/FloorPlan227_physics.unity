@@ -38,7 +38,7 @@ RenderSettings:
   m_ReflectionIntensity: 1
   m_CustomReflection: {fileID: 0}
   m_Sun: {fileID: 0}
-  m_IndirectSpecularColor: {r: 0.943227, g: 0.9682397, b: 0.77938455, a: 1}
+  m_IndirectSpecularColor: {r: 0.94326127, g: 0.96826965, b: 0.77940637, a: 1}
   m_UseRadianceAmbientProbe: 0
 --- !u!157 &3
 LightmapSettings:
@@ -1727,6 +1727,7 @@ MonoBehaviour:
   salientMaterials: 
   CurrentTemperature: 0
   HowManySecondsUntilRoomTemp: 10
+  inMotion: 0
   ContainedObjectReferences: []
 --- !u!1 &63408648
 GameObject:
@@ -3063,6 +3064,7 @@ MonoBehaviour:
   salientMaterials: 01000000
   CurrentTemperature: 0
   HowManySecondsUntilRoomTemp: 10
+  inMotion: 0
   ContainedObjectReferences: []
 --- !u!1 &117734757
 GameObject:
@@ -3799,6 +3801,7 @@ MonoBehaviour:
   salientMaterials: 
   CurrentTemperature: 0
   HowManySecondsUntilRoomTemp: 10
+  inMotion: 0
   ContainedObjectReferences: []
 --- !u!54 &135624071
 Rigidbody:
@@ -4636,6 +4639,7 @@ MonoBehaviour:
   salientMaterials: 01000000
   CurrentTemperature: 0
   HowManySecondsUntilRoomTemp: 10
+  inMotion: 0
   ContainedObjectReferences: []
 --- !u!1 &191185808
 GameObject:
@@ -7626,6 +7630,7 @@ MonoBehaviour:
   salientMaterials: 01000000
   CurrentTemperature: 0
   HowManySecondsUntilRoomTemp: 10
+  inMotion: 0
   ContainedObjectReferences: []
 --- !u!1 &322547592
 GameObject:
@@ -7721,6 +7726,7 @@ MonoBehaviour:
   salientMaterials: 
   CurrentTemperature: 0
   HowManySecondsUntilRoomTemp: 10
+  inMotion: 0
   ContainedObjectReferences: []
 --- !u!1 &324681621
 GameObject:
@@ -9517,6 +9523,10 @@ PrefabInstance:
       propertyPath: m_Enabled
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 2000000, guid: 5e9e851c0e142814dac026a256ba2ac0, type: 3}
+      propertyPath: m_RenderingPath
+      value: -1
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 5e9e851c0e142814dac026a256ba2ac0, type: 3}
 --- !u!1 &403113809
@@ -11162,6 +11172,7 @@ MonoBehaviour:
   salientMaterials: 
   CurrentTemperature: 0
   HowManySecondsUntilRoomTemp: 10
+  inMotion: 0
   ContainedObjectReferences: []
 --- !u!1 &466140830
 GameObject:
@@ -11656,6 +11667,7 @@ MonoBehaviour:
   salientMaterials: 
   CurrentTemperature: 0
   HowManySecondsUntilRoomTemp: 10
+  inMotion: 0
   ContainedObjectReferences: []
 --- !u!1 &491467962
 GameObject:
@@ -14130,6 +14142,7 @@ MonoBehaviour:
   salientMaterials: 
   CurrentTemperature: 0
   HowManySecondsUntilRoomTemp: 10
+  inMotion: 0
   ContainedObjectReferences: []
 --- !u!1 &591217048
 GameObject:
@@ -15102,6 +15115,7 @@ MonoBehaviour:
   salientMaterials: 
   CurrentTemperature: 0
   HowManySecondsUntilRoomTemp: 10
+  inMotion: 0
   ContainedObjectReferences: []
 --- !u!1 &644092688
 GameObject:
@@ -17882,6 +17896,7 @@ MonoBehaviour:
   salientMaterials: 
   CurrentTemperature: 0
   HowManySecondsUntilRoomTemp: 10
+  inMotion: 0
   ContainedObjectReferences: []
 --- !u!1 &790386958
 GameObject:
@@ -18170,6 +18185,7 @@ MonoBehaviour:
   salientMaterials: 
   CurrentTemperature: 0
   HowManySecondsUntilRoomTemp: 10
+  inMotion: 0
   ContainedObjectReferences: []
 --- !u!1 &806822439
 GameObject:
@@ -21118,6 +21134,7 @@ MonoBehaviour:
   salientMaterials: 
   CurrentTemperature: 0
   HowManySecondsUntilRoomTemp: 10
+  inMotion: 0
   ContainedObjectReferences: []
 --- !u!54 &882173113
 Rigidbody:
@@ -22341,6 +22358,7 @@ MonoBehaviour:
   salientMaterials: 
   CurrentTemperature: 0
   HowManySecondsUntilRoomTemp: 10
+  inMotion: 0
   ContainedObjectReferences: []
 --- !u!1 &923824160
 GameObject:
@@ -25341,6 +25359,7 @@ MonoBehaviour:
   salientMaterials: 
   CurrentTemperature: 0
   HowManySecondsUntilRoomTemp: 10
+  inMotion: 0
   ContainedObjectReferences: []
 --- !u!1 &1043124889 stripped
 GameObject:
@@ -26161,6 +26180,7 @@ MonoBehaviour:
   salientMaterials: 
   CurrentTemperature: 0
   HowManySecondsUntilRoomTemp: 10
+  inMotion: 0
   ContainedObjectReferences: []
 --- !u!1 &1070499478
 GameObject:
@@ -31026,6 +31046,7 @@ MonoBehaviour:
   salientMaterials: 
   CurrentTemperature: 0
   HowManySecondsUntilRoomTemp: 10
+  inMotion: 0
   ContainedObjectReferences: []
 --- !u!1 &1216096498
 GameObject:
@@ -31153,6 +31174,7 @@ MonoBehaviour:
   salientMaterials: 
   CurrentTemperature: 0
   HowManySecondsUntilRoomTemp: 10
+  inMotion: 0
   ContainedObjectReferences: []
 --- !u!1 &1222975539
 GameObject:
@@ -34509,11 +34531,6 @@ PrefabInstance:
       propertyPath: m_LocalScale.z
       value: 1.0437799
       objectReference: {fileID: 0}
-    - target: {fileID: 114448760657764924, guid: 6877aba5a696347dbb6c01f851f2da28,
-        type: 3}
-      propertyPath: myParent
-      value: 
-      objectReference: {fileID: 1813516275}
     - target: {fileID: 65569799956894354, guid: 6877aba5a696347dbb6c01f851f2da28,
         type: 3}
       propertyPath: m_Size.y
@@ -34534,6 +34551,11 @@ PrefabInstance:
       propertyPath: m_Size.z
       value: 0.5320428
       objectReference: {fileID: 0}
+    - target: {fileID: 114448760657764924, guid: 6877aba5a696347dbb6c01f851f2da28,
+        type: 3}
+      propertyPath: myParent
+      value: 
+      objectReference: {fileID: 1813516275}
     m_RemovedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 6877aba5a696347dbb6c01f851f2da28, type: 3}
 --- !u!4 &1347448045 stripped
@@ -35002,6 +35024,7 @@ MonoBehaviour:
   salientMaterials: 
   CurrentTemperature: 0
   HowManySecondsUntilRoomTemp: 10
+  inMotion: 0
   ContainedObjectReferences: []
 --- !u!1 &1371248459
 GameObject:
@@ -35320,6 +35343,7 @@ MonoBehaviour:
   salientMaterials: 
   CurrentTemperature: 0
   HowManySecondsUntilRoomTemp: 10
+  inMotion: 0
   ContainedObjectReferences: []
 --- !u!1 &1379552869
 GameObject:
@@ -38546,6 +38570,7 @@ MonoBehaviour:
   salientMaterials: 
   CurrentTemperature: 0
   HowManySecondsUntilRoomTemp: 10
+  inMotion: 0
   ContainedObjectReferences: []
 --- !u!1 &1541483420
 GameObject:
@@ -40179,6 +40204,7 @@ MonoBehaviour:
   salientMaterials: 
   CurrentTemperature: 0
   HowManySecondsUntilRoomTemp: 10
+  inMotion: 0
   ContainedObjectReferences: []
 --- !u!1 &1599091998
 GameObject:
@@ -40779,6 +40805,7 @@ MonoBehaviour:
   salientMaterials: 
   CurrentTemperature: 0
   HowManySecondsUntilRoomTemp: 10
+  inMotion: 0
   ContainedObjectReferences: []
 --- !u!4 &1617076670
 Transform:
@@ -41137,6 +41164,7 @@ MonoBehaviour:
   salientMaterials: 
   CurrentTemperature: 0
   HowManySecondsUntilRoomTemp: 10
+  inMotion: 0
   ContainedObjectReferences: []
 --- !u!1 &1634729685
 GameObject:
@@ -41515,6 +41543,7 @@ MonoBehaviour:
   salientMaterials: 
   CurrentTemperature: 0
   HowManySecondsUntilRoomTemp: 10
+  inMotion: 0
   ContainedObjectReferences: []
 --- !u!1001 &1655120875
 PrefabInstance:
@@ -42224,6 +42253,7 @@ MonoBehaviour:
   salientMaterials: 
   CurrentTemperature: 0
   HowManySecondsUntilRoomTemp: 10
+  inMotion: 0
   ContainedObjectReferences: []
 --- !u!1 &1669912035
 GameObject:
@@ -47315,6 +47345,7 @@ MonoBehaviour:
   salientMaterials: 
   CurrentTemperature: 0
   HowManySecondsUntilRoomTemp: 10
+  inMotion: 0
   ContainedObjectReferences: []
 --- !u!54 &1798373700
 Rigidbody:
@@ -47607,6 +47638,7 @@ MonoBehaviour:
   salientMaterials: 
   CurrentTemperature: 0
   HowManySecondsUntilRoomTemp: 10
+  inMotion: 0
   ContainedObjectReferences: []
 --- !u!1001 &1803137955
 PrefabInstance:
@@ -48047,6 +48079,7 @@ MonoBehaviour:
   salientMaterials: 
   CurrentTemperature: 0
   HowManySecondsUntilRoomTemp: 10
+  inMotion: 0
   ContainedObjectReferences: []
 --- !u!1 &1814423843
 GameObject:
@@ -48272,6 +48305,7 @@ MonoBehaviour:
   salientMaterials: 
   CurrentTemperature: 0
   HowManySecondsUntilRoomTemp: 10
+  inMotion: 0
   ContainedObjectReferences: []
 --- !u!1 &1817561228
 GameObject:
@@ -48745,6 +48779,7 @@ MonoBehaviour:
   salientMaterials: 
   CurrentTemperature: 0
   HowManySecondsUntilRoomTemp: 10
+  inMotion: 0
   ContainedObjectReferences: []
 --- !u!1 &1840940803
 GameObject:
@@ -49198,6 +49233,7 @@ MonoBehaviour:
   salientMaterials: 01000000
   CurrentTemperature: 0
   HowManySecondsUntilRoomTemp: 10
+  inMotion: 0
   ContainedObjectReferences: []
 --- !u!1 &1863628896 stripped
 GameObject:
@@ -50212,6 +50248,7 @@ MonoBehaviour:
   salientMaterials: 
   CurrentTemperature: 0
   HowManySecondsUntilRoomTemp: 10
+  inMotion: 0
   ContainedObjectReferences: []
 --- !u!1 &1917986756
 GameObject:
@@ -50424,6 +50461,7 @@ MonoBehaviour:
   salientMaterials: 
   CurrentTemperature: 0
   HowManySecondsUntilRoomTemp: 10
+  inMotion: 0
   ContainedObjectReferences: []
 --- !u!1 &1922639079
 GameObject:
@@ -50673,6 +50711,7 @@ MonoBehaviour:
   salientMaterials: 
   CurrentTemperature: 0
   HowManySecondsUntilRoomTemp: 10
+  inMotion: 0
   ContainedObjectReferences: []
 --- !u!1 &1933195963
 GameObject:
@@ -51388,6 +51427,7 @@ MonoBehaviour:
   salientMaterials: 01000000
   CurrentTemperature: 0
   HowManySecondsUntilRoomTemp: 10
+  inMotion: 0
   ContainedObjectReferences: []
 --- !u!1 &1948324811
 GameObject:
@@ -51512,6 +51552,7 @@ MonoBehaviour:
   salientMaterials: 
   CurrentTemperature: 0
   HowManySecondsUntilRoomTemp: 10
+  inMotion: 0
   ContainedObjectReferences: []
 --- !u!1 &1950541949
 GameObject:
@@ -52045,6 +52086,7 @@ MonoBehaviour:
   salientMaterials: 
   CurrentTemperature: 0
   HowManySecondsUntilRoomTemp: 10
+  inMotion: 0
   ContainedObjectReferences: []
 --- !u!54 &1960590833
 Rigidbody:
@@ -53291,6 +53333,7 @@ MonoBehaviour:
   salientMaterials: 01000000
   CurrentTemperature: 0
   HowManySecondsUntilRoomTemp: 10
+  inMotion: 0
   ContainedObjectReferences: []
 --- !u!1 &1998744765 stripped
 GameObject:
@@ -53880,6 +53923,7 @@ MonoBehaviour:
   salientMaterials: 
   CurrentTemperature: 0
   HowManySecondsUntilRoomTemp: 10
+  inMotion: 0
   ContainedObjectReferences: []
 --- !u!1 &2032105303
 GameObject:
@@ -60520,6 +60564,7 @@ MonoBehaviour:
   salientMaterials: 
   CurrentTemperature: 0
   HowManySecondsUntilRoomTemp: 10
+  inMotion: 0
   ContainedObjectReferences: []
 --- !u!114 &114947105991989184
 MonoBehaviour:
@@ -60594,6 +60639,7 @@ MonoBehaviour:
   salientMaterials: 
   CurrentTemperature: 0
   HowManySecondsUntilRoomTemp: 10
+  inMotion: 0
   ContainedObjectReferences: []
 --- !u!114 &114947106123015599
 MonoBehaviour:
@@ -60668,6 +60714,7 @@ MonoBehaviour:
   salientMaterials: 
   CurrentTemperature: 0
   HowManySecondsUntilRoomTemp: 10
+  inMotion: 0
   ContainedObjectReferences: []
 --- !u!114 &114947106903832604
 MonoBehaviour:
@@ -60742,6 +60789,7 @@ MonoBehaviour:
   salientMaterials: 
   CurrentTemperature: 0
   HowManySecondsUntilRoomTemp: 10
+  inMotion: 0
   ContainedObjectReferences: []
 --- !u!114 &114947106934961176
 MonoBehaviour:
@@ -60816,6 +60864,7 @@ MonoBehaviour:
   salientMaterials: 
   CurrentTemperature: 0
   HowManySecondsUntilRoomTemp: 10
+  inMotion: 0
   ContainedObjectReferences: []
 --- !u!33 &435267904527866799
 MeshFilter:

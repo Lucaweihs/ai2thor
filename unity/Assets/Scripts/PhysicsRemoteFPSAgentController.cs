@@ -939,6 +939,25 @@ namespace UnityStandardAssets.Characters.FirstPerson {
             }
         }
 
+        public void RotateRightSmooth(ServerAction controlCommand) {
+            if (CheckIfAgentCanTurn(90)) {
+                DefaultAgentHand(controlCommand);
+                StartCoroutine(InterpolateRotation(this.GetRotateQuaternion(1), controlCommand.timeStep));
+            } else {
+                actionFinished(false);
+            }
+
+        }
+
+        public void RotateLeftSmooth(ServerAction controlCommand) {
+            if (CheckIfAgentCanTurn(-90)) {
+                DefaultAgentHand(controlCommand);
+                StartCoroutine(InterpolateRotation(this.GetRotateQuaternion(-1), controlCommand.timeStep));
+            } else {
+                actionFinished(false);
+            }
+        }
+
         //checks if agent is clear to rotate left/right without object in hand hitting anything
         public bool CheckIfAgentCanTurn(int direction) {
             bool result = true;
@@ -1860,40 +1879,161 @@ namespace UnityStandardAssets.Characters.FirstPerson {
                 return false;
             }
         }
+
+        public IEnumerator MoveSmooth(
+            Vector3 direction,
+            float timeSeconds,
+            string uniqueId="",
+            float maxDistanceToObject=-1.0f
+        ) {
+
+            Vector3 targetPosition = transform.position + direction;
+            var normDir = Vector3.Normalize(direction);
+            float angle = Vector3.Angle(transform.forward, normDir);
+
+            float right = Vector3.Dot(transform.right, direction);
+            if (right < 0) {
+                angle = 360f - angle;
+            }
+            int angleInt = Mathf.RoundToInt(angle) % 360;
+
+            if (checkIfSceneBoundsContainTargetPosition(targetPosition) &&
+                CheckIfItemBlocksAgentMovement(direction.magnitude, angleInt) &&
+                CheckIfAgentCanMove(direction.magnitude, angleInt)) {
+                DefaultAgentHand();
+                Vector3 oldPosition = transform.position;
+
+                if (uniqueId != "" && maxDistanceToObject > 0.0f) {
+                    if (!physicsSceneManager.UniqueIdToSimObjPhysics.ContainsKey(uniqueId)) {
+                        errorMessage = "No object with ID " + uniqueId;
+                        transform.position = oldPosition; 
+                        // yield return StartCoroutine(actionFinishedAsync(false));
+                        actionFinished(false);
+                        yield break;
+                    }
+                    SimObjPhysics sop = physicsSceneManager.UniqueIdToSimObjPhysics[uniqueId];
+                    if (distanceToObject(sop) > maxDistanceToObject) {
+                        errorMessage = "Agent movement would bring it beyond the max distance of " + uniqueId;
+                        transform.position = oldPosition;
+                        //yield return StartCoroutine(actionFinishedAsync(false));
+                        actionFinished(false);
+                        yield break;
+                    }
+                }
+               
+            } else {
+                 //yield return StartCoroutine(actionFinishedAsync(false));
+                 actionFinished(false);
+                 yield break;
+            }
+
+            var speed = direction.magnitude / timeSeconds;
+
+			// m.y = Physics.gravity.y * this.m_GravityMultiplier;
+            var timer = 0.0f;
+            var iniitialPos= transform.position;
+            while (timer < timeSeconds) {
+                
+                var alpha = timer/timeSeconds;
+                alpha = Mathf.Clamp(alpha, 0.0f, 1.0f);
+
+                //transform.position += normDir * speed * Time.deltaTime;
+                transform.position =  iniitialPos + alpha * direction;
+                yield return new WaitForEndOfFrame();
+                timer += Time.deltaTime;
+            }
+
+            transform.position = targetPosition;
+            this.snapToGrid();
+             //yield return new WaitForEndOfFrame();
+			
+			//yield return StartCoroutine(actionFinishedAsync(true));
+            actionFinished(true);
+        }
+
+
         public override void MoveLeft(ServerAction action) {
             action.moveMagnitude = action.moveMagnitude > 0 ? action.moveMagnitude : gridSize;
-            actionFinished(moveInDirection(
-                -1 * transform.right * action.moveMagnitude,
-                action.objectId,
-                action.maxAgentsDistance
-            ));
+            var dir = -1 * transform.right * action.moveMagnitude;
+            if (!action.continuous) {
+                actionFinished(moveInDirection(
+                    dir,
+                    action.objectId,
+                    action.maxAgentsDistance
+                ));
+            }
+            else {
+                StartCoroutine(MoveSmooth(
+                    dir,
+                    action.timeSeconds,
+                    action.objectId,
+                    action.maxAgentsDistance
+                    )
+                );
+            }
         }
 
         public override void MoveRight(ServerAction action) {
             action.moveMagnitude = action.moveMagnitude > 0 ? action.moveMagnitude : gridSize;
-            actionFinished(moveInDirection(
-                transform.right * action.moveMagnitude,
-                action.objectId,
-                action.maxAgentsDistance
-            ));
+            var dir = transform.right * action.moveMagnitude;
+            if (!action.continuous) {
+                actionFinished(moveInDirection(
+                    dir,
+                    action.objectId,
+                    action.maxAgentsDistance
+                ));
+            }
+            else {
+                StartCoroutine(MoveSmooth(
+                    dir,
+                    action.timeSeconds,
+                    action.objectId,
+                    action.maxAgentsDistance
+                    )
+                );
+            }
         }
 
         public override void MoveAhead(ServerAction action) {
             action.moveMagnitude = action.moveMagnitude > 0 ? action.moveMagnitude : gridSize;
-            actionFinished(moveInDirection(
-                transform.forward * action.moveMagnitude,
-                action.objectId,
-                action.maxAgentsDistance
-            ));
+            var dir = transform.forward * action.moveMagnitude;
+            if (!action.continuous) {
+                actionFinished(moveInDirection(
+                    dir,
+                    action.objectId,
+                    action.maxAgentsDistance
+                ));
+            }
+            else {
+                StartCoroutine(MoveSmooth(
+                    dir,
+                    action.timeSeconds,
+                    action.objectId,
+                    action.maxAgentsDistance
+                    )
+                );
+            }
         }
 
         public override void MoveBack(ServerAction action) {
             action.moveMagnitude = action.moveMagnitude > 0 ? action.moveMagnitude : gridSize;
-            actionFinished(moveInDirection(
-                -1 * transform.forward * action.moveMagnitude,
-                action.objectId,
-                action.maxAgentsDistance
-            ));
+            var dir = -1 * transform.forward * action.moveMagnitude;
+            if (!action.continuous) {
+                actionFinished(moveInDirection(
+                    dir,
+                    action.objectId,
+                    action.maxAgentsDistance
+                ));
+            }
+            else {
+                StartCoroutine(MoveSmooth(
+                    dir,
+                    action.timeSeconds,
+                    action.objectId,
+                    action.maxAgentsDistance
+                    )
+                );
+            }
         }
 
         //Flying Drone Agent Controls
@@ -2485,10 +2625,18 @@ namespace UnityStandardAssets.Characters.FirstPerson {
 
                     //including "Untagged" tag here so that the agent can't move through objects that are transparent
                     if (res.transform.GetComponent<SimObjPhysics>() || res.transform.tag == "Structure" || res.transform.tag == "Untagged") {
-                        int thisAgentNum = agentManager.agents.IndexOf(this);
-                        errorMessage = res.transform.name + " is blocking Agent " + thisAgentNum.ToString() + " from moving " + orientation;
-                        //the moment we find a result that is blocking, return false here
-                        return false;
+                        var simObj = res.transform.GetComponent<SimObjPhysics>();
+                        //Debug.Log(simObj.uniqueID + " other " + this.GetComponent<DiscretePointClickAgentController>().onlyPickableObjectId);
+                        if (simObj != null && this.GetComponent<DiscretePointClickAgentController>().disableCollistionWithPickupObject && simObj.uniqueID == this.GetComponent<DiscretePointClickAgentController>().onlyPickableObjectId) {
+                           
+                        }
+                        else {
+
+                            int thisAgentNum = agentManager.agents.IndexOf(this);
+                            errorMessage = res.transform.name + " is blocking Agent " + thisAgentNum.ToString() + " from moving " + orientation;
+                            //the moment we find a result that is blocking, return false here
+                            return false;
+                        }
                     }
                 }
             }
@@ -2692,6 +2840,34 @@ namespace UnityStandardAssets.Characters.FirstPerson {
                 OpenObject(action);
             } else {
                 errorMessage = hit.transform.gameObject.name + " is not interactable.";
+                actionFinished(false);
+            }
+        }
+
+        public void GetAwayFromObject(ServerAction action) {
+            if (physicsSceneManager.UniqueIdToSimObjPhysics.ContainsKey(action.objectId)) {
+                SimObjPhysics sop = physicsSceneManager.UniqueIdToSimObjPhysics[action.objectId];
+                int k = 0;
+                while (isAgentCapsuleCollidingWith(sop.gameObject) && k < 40) {
+                    k++;
+                    Vector3[] dirs = {
+                        transform.forward, -transform.forward, transform.right, -transform.right
+                    };
+                    dirs.Shuffle_(k);
+
+                    sop.gameObject.SetActive(false);
+                    moveInDirection(dirs[0] * gridSize);
+                    sop.gameObject.SetActive(true);
+                }
+                if (isAgentCapsuleCollidingWith(sop.gameObject)) {
+                    errorMessage = "Could not get away from " + sop.UniqueID;
+                    actionFinished(false);
+                    return;
+                }
+                actionFinished(true);
+            }
+            else {
+                errorMessage = "No object with given id could be found to disable collisions with.";
                 actionFinished(false);
             }
         }
@@ -3783,6 +3959,34 @@ namespace UnityStandardAssets.Characters.FirstPerson {
 #endif
         }
 
+
+        public void SelectObject(ServerAction action) //use serveraction objectid
+        {
+            if (!physicsSceneManager.UniqueIdToSimObjPhysics.ContainsKey(action.objectId)) {
+                errorMessage = "Object ID appears to be invalid.";
+                actionFinished(false);
+                return;
+            }
+            
+            SimObjPhysics target = physicsSceneManager.UniqueIdToSimObjPhysics[action.objectId]; 
+
+            if (!action.forceAction && !objectIsCurrentlyVisible(target, maxVisibleDistance)) {
+                errorMessage = action.objectId + " is not visible.";
+                actionFinished(false);
+                return;
+            }
+
+            if (!action.forceAction && target.isInteractable == false) {
+                errorMessage = action.objectId + " is not interactable and (perhaps it is occluded by something).";
+                actionFinished(false);
+                return;
+            }
+
+            actionFinished(true, target.UniqueID);
+            return;
+        }
+
+
         public void PickupObject(ServerAction action) //use serveraction objectid
         {
             if (!physicsSceneManager.UniqueIdToSimObjPhysics.ContainsKey(action.objectId)) {
@@ -4124,7 +4328,7 @@ namespace UnityStandardAssets.Characters.FirstPerson {
             actionFinished(true);
         }
 
-        private void UpdateDisplayGameObject(GameObject go, bool display) {
+        public void UpdateDisplayGameObject(GameObject go, bool display) {
             if (go != null) {
                 foreach (MeshRenderer mr in go.GetComponentsInChildren<MeshRenderer>() as MeshRenderer[]) {
                     if (!initiallyDisabledRenderers.Contains(mr.GetInstanceID())) {
@@ -4554,6 +4758,23 @@ namespace UnityStandardAssets.Characters.FirstPerson {
                 }
             }
             return anyStillRunning;
+        }
+
+        protected IEnumerator InterpolateRotation(Quaternion targetRotation, float seconds) {
+            var time = Time.time;
+            var newTime = time;
+            while (newTime - time < seconds) {
+                yield return new WaitForEndOfFrame();
+                newTime = Time.time;
+                var diffSeconds = newTime - time;
+                var alpha = Mathf.Min(diffSeconds / seconds, 1.0f);
+                this.transform.rotation = Quaternion.Lerp(this.transform.rotation, targetRotation, alpha);
+                
+            }
+            Debug.Log("Rotate action finished! " + (newTime - time) );
+            //  this.transform.rotation = targetRotation;
+            //yield return StartCoroutine(actionFinishedAsync(true));
+            actionFinished(true);
         }
 
         protected IEnumerator InteractAndWait(List<CanOpen_Object> coos, bool freezeContained = false) {
@@ -5486,7 +5707,7 @@ namespace UnityStandardAssets.Characters.FirstPerson {
         ///// Crouch and Stand /////
         ////////////////////////////
 
-        protected bool isStanding() {
+        public bool isStanding() {
             return standingLocalCameraPosition == m_Camera.transform.localPosition;
         }
 
@@ -6395,6 +6616,60 @@ namespace UnityStandardAssets.Characters.FirstPerson {
             }
         }
 
+        public void RandomlyMoveAgent(ServerAction action) {
+            reachablePositions = getReachablePositions();
+            var orientations = new float[]{
+                0,
+                90,
+                180,
+                270
+            };
+            orientations.Shuffle_(action.randomSeed);
+            reachablePositions.Shuffle_(action.randomSeed);
+
+            bool success = false;
+            foreach (Vector3 position in reachablePositions) {
+                foreach (float rotation in orientations) {
+                    if (handObjectCanFitInPosition(position, rotation)) {
+                        this.transform.position = position;
+                        this.transform.rotation = Quaternion.Euler(0.0f, rotation, 0.0f);
+                        success = true;
+                        break;
+                    }
+                }
+            }
+
+            if (errorMessage != "") {
+                actionFinished(false);
+            } else if (!success) {
+                errorMessage = "Could not find a position in which the agent and object fit.";
+                actionFinished(false);
+            } else {
+                actionFinished(true, reachablePositions);
+            }
+        }
+
+        //  public void RandomlyMoveAgent(ServerAction action) {
+        //     UnityEngine.Random.InitState(action.randomSeed);
+        //     reachablePositions = getReachablePositions();
+        //     var orientations = new float[]{
+        //         0,
+        //         90, 
+        //         180,
+        //         270
+        //     };
+        //     var posIndex =  UnityEngine.Random.Range (0, reachablePositions.Length);
+        //     var rotIndex = UnityEngine.Random.Range (0, orientations.Length);
+        //     this.transform.position = reachablePositions[posIndex];
+        //     this.transform.Rotate(0, orientations[rotIndex], 0);
+           
+        //     if (errorMessage != "") {
+        //         actionFinished(false);
+        //     } else {
+        //         actionFinished(true, reachablePositions);
+        //     }
+        // }
+
         private bool ancestorHasName(GameObject go, string name) {
             if (go.name == name) {
                 return true;
@@ -6518,7 +6793,7 @@ namespace UnityStandardAssets.Characters.FirstPerson {
                 physicsSceneManager.AddToObjectsInScene(so);
             }
 
-            actionFinished(true);
+            actionFinished(true, so.uniqueID);
         }
 
         protected SimObjPhysics createObjectAtLocation(string objectType, Vector3 targetPosition, Vector3 targetRotation, int objectVariation = 1) {

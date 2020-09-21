@@ -203,6 +203,24 @@ namespace UnityStandardAssets.Characters.FirstPerson
 			targetTeleport = Vector3.zero;
 		}
 
+        public IEnumerator actionFinishedAsync(bool success, System.Object actionReturn=null) 
+		{		
+			if (actionComplete) 
+			{
+                while (actionComplete) {
+                    Debug.Log("ActionFinished collision");
+                    yield return new WaitForEndOfFrame();
+                }
+			}
+
+            actionFinished(success, actionReturn);
+		}
+
+        public string GetLastAction(out bool success) {
+            success = lastActionSuccess;
+            return lastAction;
+        }
+
 		abstract public Vector3[] getReachablePositions(float gridMultiplier=1.0f);
 
 		public void Initialize(ServerAction action)
@@ -466,7 +484,6 @@ namespace UnityStandardAssets.Characters.FirstPerson
 			imageSynthesis.enabled = true;			
 		}
 
-
 		public void ProcessControlCommand(ServerAction controlCommand)
 		{
             currentServerAction = controlCommand;
@@ -479,6 +496,11 @@ namespace UnityStandardAssets.Characters.FirstPerson
 			lastActionSuccess = false;
 			lastPosition = new Vector3(transform.position.x, transform.position.y, transform.position.z);
 			System.Reflection.MethodInfo method = this.GetType().GetMethod(controlCommand.action);
+
+            if (!this.actionComplete) {
+
+                Debug.Log("------------ Calling action without previous completing");
+            }
 			
 			this.actionComplete = false;
 			try
@@ -571,12 +593,24 @@ namespace UnityStandardAssets.Characters.FirstPerson
 		//move in cardinal directions
 		virtual protected void moveCharacter(ServerAction action, int targetOrientation)
 		{
-			//resetHand(); when I looked at this resetHand in DiscreteRemoteFPSAgent was just commented out doing nothing so...
-			moveMagnitude = gridSize;
+            moveMagnitude = gridSize;
 			if (action.moveMagnitude > 0)
 			{
 				moveMagnitude = action.moveMagnitude;
 			}
+			//resetHand(); when I looked at this resetHand in DiscreteRemoteFPSAgent was just commented out doing nothing so...
+			var m = getMoveVector(action, targetOrientation);
+
+			m *= moveMagnitude;
+
+			m.y = Physics.gravity.y * this.m_GravityMultiplier;
+			m_CharacterController.Move(m);
+			actionFinished(true);
+			// StartCoroutine(checkMoveAction(action));
+		}
+
+        private Vector3 getMoveVector(ServerAction action, int targetOrientation) {
+            
 			int currentRotation = (int)Math.Round(transform.rotation.eulerAngles.y, 0);
 			Dictionary<int, Vector3> actionOrientation = new Dictionary<int, Vector3>();
 			actionOrientation.Add(0, new Vector3(0f, 0f, 1.0f));
@@ -601,14 +635,8 @@ namespace UnityStandardAssets.Characters.FirstPerson
 				actionOrientation.Add(270, transform.right * -1);
 				m = actionOrientation[targetOrientation];
 			}
-
-			m *= moveMagnitude;
-
-			m.y = Physics.gravity.y * this.m_GravityMultiplier;
-			m_CharacterController.Move(m);
-			actionFinished(true);
-			// StartCoroutine(checkMoveAction(action));
-		}
+            return m;
+        }
 
         //this is not currently used by the Physics agent. Physics agent now checks the final movement position first before moving, so collision checks after trying to move are no longer needed
 		virtual protected IEnumerator checkMoveAction(ServerAction action)
@@ -693,26 +721,81 @@ namespace UnityStandardAssets.Characters.FirstPerson
 		}
 
 
+        public IEnumerator MoveSmooth(ServerAction action, int targetOrientation) {
+            Debug.Log("Move smooth call");	
+             moveMagnitude = gridSize;
+			if (action.moveMagnitude > 0)
+			{
+				moveMagnitude = action.moveMagnitude;
+			}
+
+            var dir = getMoveVector(action, targetOrientation);
+
+			var targetMoveDelta = dir * moveMagnitude;
+            var speed = targetMoveDelta.magnitude / action.timeSeconds;
+
+			// m.y = Physics.gravity.y * this.m_GravityMultiplier;
+            var timer = 0.0f;
+            while (timer < action.timeSeconds) {
+                timer += Time.deltaTime;
+                
+                var moveDelta = dir * speed * Time.deltaTime;
+                // moveDelta.y = Physics.gravity.y * this.m_GravityMultiplier * Time.deltaTime;
+                   Debug.Log("Move smooth 1");	
+                m_CharacterController.Move(moveDelta);
+                yield return new WaitForEndOfFrame();
+            }
+			
+			actionFinished(true);
+        }
 
 
 		public virtual void MoveLeft(ServerAction action)
 		{
-			moveCharacter(action, 270);
+            
+            if (!action.continuous) {
+                moveCharacter(action, 270);
+                
+            }
+            else {
+                StartCoroutine(MoveSmooth(action, 270));
+            }
 		}
 
 		public virtual void MoveRight(ServerAction action)
 		{
-			moveCharacter(action, 90);
+			if (!action.continuous) {
+                moveCharacter(action, 90);
+                
+            }
+            else {
+                StartCoroutine(MoveSmooth(action, 90));
+            }
 		}
 
 		public virtual void MoveAhead(ServerAction action)
 		{
-			moveCharacter(action, 0);
+            Debug.Log("Move Ahead cont? " + action.continuous + " time " + action.timeSeconds);
+            if (!action.continuous) {
+                moveCharacter(action, 0);
+                
+            }
+            else {
+                StartCoroutine(MoveSmooth(action, 0));
+            }
+			// moveCharacter(action, 0);
+            
 		}
 
 		public virtual void MoveBack(ServerAction action)
 		{
-			moveCharacter(action, 180);
+			if (!action.continuous) {
+                moveCharacter(action, 180);
+                
+            }
+            else {
+                StartCoroutine(MoveSmooth(action, 180));
+            }
 		}
 
 		//free move
@@ -784,29 +867,24 @@ namespace UnityStandardAssets.Characters.FirstPerson
 		//rotates 90 degrees left w/ respect to current forward
 		public virtual void RotateLeft(ServerAction controlCommand)
 		{
-			int index = currentHeadingAngleIndex() - 1;
-			if (index < 0)
-			{
-				index = headingAngles.Length - 1;
-			}
-			float targetRotation = headingAngles[index];
-			transform.rotation = Quaternion.Euler(new Vector3(0.0f, targetRotation, 0.0f));
+			transform.rotation = GetRotateQuaternion(-1);
 			actionFinished(true);
 
 		}
 
+		public virtual Quaternion GetRotateQuaternion(int headIndex)
+		{
+			int index = (headingAngles.Length + (currentHeadingAngleIndex() + headIndex)) % headingAngles.Length;
+			Debug.Log("Current " + currentHeadingAngleIndex() + " head " + (currentHeadingAngleIndex() + headIndex) + " mod " + index);
+			float targetRotation = headingAngles[index];
+			return Quaternion.Euler(new Vector3(0.0f, targetRotation, 0.0f));
+		}
+		
+
 		//rotates 90 degrees right w/ respect to current forward
 		public virtual void RotateRight(ServerAction controlCommand)
 		{
-
-			int index = currentHeadingAngleIndex() + 1;
-			if (index == headingAngles.Length)
-			{
-				index = 0;
-			}
-
-			float targetRotation = headingAngles[index];
-			transform.rotation = Quaternion.Euler(new Vector3(0.0f, targetRotation, 0.0f));
+			transform.rotation = transform.rotation = GetRotateQuaternion(1);
 			actionFinished(true);
 		}
 
